@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — PolyCoach</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Lato:wght@400;700&display=swap');
+:root{--primary:#0b294d;--accent:#0099ff;--danger:#e53e3e;--warning:#d69e2e;--success:#28a745;--bg:#f0f2f5;--sidebar:220px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Lato',sans-serif;background:var(--bg);display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--primary);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:200;overflow-y:auto;}
+.sidebar-logo{padding:22px 18px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;}
+.sidebar-logo img{height:36px;}
+.sidebar-logo span{font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;font-weight:900;letter-spacing:1px;}
+.nav-link{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;font-size:0.9rem;font-weight:700;color:rgba(255,255,255,0.75);border-left:3px solid transparent;transition:all 0.2s;position:relative;}
+.nav-link:hover,.nav-link.active{background:rgba(255,255,255,0.1);color:#fff;border-left-color:var(--accent);}
+.nav-link i{width:18px;text-align:center;}
+.badge{background:var(--danger);color:#fff;font-size:0.7rem;font-weight:700;border-radius:10px;padding:2px 7px;margin-left:auto;}
+.nav-logout{margin-top:auto;padding:14px 20px;cursor:pointer;color:#ff8080;display:flex;align-items:center;gap:12px;font-weight:700;font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.1);}
+.nav-logout:hover{background:rgba(255,0,0,0.1);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;min-height:100vh;}
+.top-bar{background:#fff;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;}
+.top-bar h1{font-family:'Barlow Condensed',sans-serif;font-size:1.7rem;color:var(--primary);font-weight:900;}
+.top-bar-user{font-size:0.85rem;color:#666;font-weight:700;}
+
+/* PANELS */
+.panel{display:none;padding:24px 28px;}
+.panel.active{display:block;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;}
+.stat-card{background:#fff;border-radius:10px;padding:20px;text-align:center;box-shadow:0 3px 12px rgba(0,0,0,0.07);}
+.stat-card .num{font-size:2.2rem;font-weight:900;font-family:'Barlow Condensed',sans-serif;color:var(--primary);}
+.stat-card .lbl{font-size:0.78rem;font-weight:700;text-transform:uppercase;color:#888;margin-top:4px;letter-spacing:0.5px;}
+
+/* TABLE */
+.table-card{background:#fff;border-radius:10px;box-shadow:0 3px 12px rgba(0,0,0,0.07);overflow:hidden;}
+.table-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap;gap:10px;}
+.table-card-header h3{font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;color:var(--primary);font-weight:700;}
+.search-input{padding:9px 14px;border:1px solid #ddd;border-radius:6px;font-size:0.88rem;font-family:'Lato',sans-serif;width:220px;}
+table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+th{background:#f8f9fa;color:#555;font-weight:700;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.5px;padding:11px 14px;text-align:left;border-bottom:2px solid #eee;}
+td{padding:11px 14px;border-bottom:1px solid #f5f5f5;vertical-align:middle;}
+tr:last-child td{border:none;}
+tr:hover td{background:#fafafa;}
+
+/* BADGES */
+.badge-pending{background:#fff8e1;color:#7b5c00;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.78rem;}
+.badge-approved{background:#e6f4ea;color:#2e7d32;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.78rem;}
+.badge-rejected{background:#fdecea;color:#b71c1c;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.78rem;}
+
+/* BUTTONS */
+.btn{border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-weight:700;font-size:0.8rem;transition:opacity 0.2s;}
+.btn:hover{opacity:0.82;}
+.btn-approve{background:var(--success);color:#fff;}
+.btn-reject{background:var(--warning);color:#fff;}
+.btn-delete{background:var(--danger);color:#fff;}
+.btn-add{background:var(--accent);color:#fff;padding:9px 18px;border-radius:6px;font-size:0.88rem;}
+.btn-save{background:var(--success);color:#fff;padding:10px 22px;border-radius:6px;font-size:0.9rem;font-weight:700;border:none;cursor:pointer;}
+
+/* BUS PANEL */
+.bus-admin-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;}
+.bus-wrap{background:#fff;border-radius:12px;padding:22px;box-shadow:0 3px 12px rgba(0,0,0,0.07);}
+.bus-wrap h3{font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;color:var(--primary);margin-bottom:16px;font-weight:700;}
+.console-card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 3px 12px rgba(0,0,0,0.07);position:sticky;top:80px;}
+.console-card h3{font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;color:var(--primary);margin-bottom:14px;font-weight:700;}
+.seat-badge{font-size:1.6rem;font-weight:900;color:var(--primary);font-family:'Barlow Condensed',sans-serif;margin-bottom:16px;}
+.cg{margin-bottom:14px;}
+.cg label{display:block;font-size:0.78rem;font-weight:700;text-transform:uppercase;color:#666;margin-bottom:5px;letter-spacing:0.4px;}
+.cg input,.cg select{width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:0.9rem;font-family:'Lato',sans-serif;}
+.bus-exterior-admin{background:#f8f9fa;padding:16px;border-radius:30px 30px 10px 10px;border:4px solid #333;}
+.bus-grid{display:grid;grid-template-columns:repeat(2,1fr) 28px repeat(3,1fr);gap:5px;}
+.seat{height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;cursor:pointer;transition:all 0.15s;border:2px solid transparent;}
+.seat.available{background:#e8f5e9;border-color:#4caf50;color:#2e7d32;}
+.seat.available:hover{background:#4caf50;color:#fff;}
+.seat.pending{background:#fff8e1;border-color:var(--warning);color:#7b5c00;}
+.seat.booked,.seat.taken{background:#fdecea;border-color:var(--danger);color:var(--danger);}
+.seat.selected-admin{background:var(--accent);border-color:#007acc;color:#fff;}
+.seat.aisle-space{background:none;border:none;cursor:default;}
+.back-row-container{grid-column:span 6;display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}
+.driver-row{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:2px solid #ddd;color:#666;font-weight:700;font-size:0.85rem;}
+
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:700px;}
+.settings-grid .full{grid-column:span 2;}
+.settings-card{background:#fff;border-radius:12px;padding:28px;box-shadow:0 3px 12px rgba(0,0,0,0.07);max-width:700px;}
+.settings-card h3{font-family:'Barlow Condensed',sans-serif;font-size:1.5rem;color:var(--primary);margin-bottom:20px;font-weight:700;}
+.settings-input{width:100%;padding:11px;border:1px solid #ddd;border-radius:6px;font-size:0.95rem;font-family:'Lato',sans-serif;}
+.settings-label{font-size:0.78rem;font-weight:700;text-transform:uppercase;color:#555;letter-spacing:0.4px;display:block;margin-bottom:6px;}
+#settingsSaved{display:none;background:#e6f4ea;color:#2e7d32;padding:12px;border-radius:6px;margin-top:14px;font-weight:700;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:999;}
+.modal-box{background:#fff;border-radius:14px;padding:32px;max-width:460px;width:92%;box-shadow:0 20px 50px rgba(0,0,0,0.3);}
+.modal-box h3{font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;color:var(--primary);margin-bottom:18px;font-weight:700;}
+.modal-actions{display:flex;gap:12px;margin-top:20px;}
+.btn-cancel{background:#eee;color:#333;padding:10px 20px;border-radius:6px;border:none;cursor:pointer;font-weight:700;}
+.proof-img{max-width:100%;border-radius:8px;margin-top:10px;max-height:220px;object-fit:contain;display:none;}
+
+/* RESPONSIVE */
+@media(max-width:900px){.bus-admin-grid{grid-template-columns:1fr;}.console-card{position:static;}}
+@media(max-width:700px){
+  .sidebar{width:60px;}.sidebar-logo span,.nav-link span{display:none;}.sidebar-logo{justify-content:center;padding:16px 0;}.nav-link{justify-content:center;padding:14px 0;border-left:none;border-bottom:3px solid transparent;}.main{margin-left:60px;}.nav-logout span{display:none;}.nav-logout{justify-content:center;}
+  .panel{padding:14px 10px;}.top-bar{padding:12px 14px;}
+  .settings-grid{grid-template-columns:1fr;}.settings-grid .full{grid-column:span 1;}
+  table{font-size:0.78rem;}td,th{padding:8px 8px;}
+}
+@media(max-width:420px){.seat{height:26px;font-size:0.58rem;}.bus-grid{gap:3px;}.back-row-container{gap:3px;}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <img src="/Images/Logo3.png" alt="Logo">
+    <span>Admin</span>
+  </div>
+  <div class="nav-link active" onclick="showPanel('bus')"><i class="fa-solid fa-bus"></i> <span>Bus Layout</span></div>
+  <div class="nav-link" onclick="showPanel('users')"><i class="fa-solid fa-users"></i> <span>Registered Users</span></div>
+  <div class="nav-link" id="pendingNavBtn" onclick="showPanel('bookings')"><i class="fa-solid fa-file-invoice-dollar"></i> <span>Pending Approvals</span> <span class="badge" id="pendingBadge" style="display:none;"></span></div>
+  <div class="nav-link" onclick="showPanel('settings')"><i class="fa-solid fa-gear"></i> <span>Settings</span></div>
+  <div class="nav-logout" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="top-bar">
+    <h1 id="panelTitle">Bus Layout &amp; Seat Control</h1>
+    <div class="top-bar-user" id="adminWelcome">Welcome, Admin</div>
+  </div>
+
+  <!-- BUS PANEL -->
+  <div id="panel-bus" class="panel active">
+    <div class="stats-row">
+      <div class="stat-card"><div class="num" id="bs-avail">—</div><div class="lbl">Available</div></div>
+      <div class="stat-card"><div class="num" id="bs-pend">—</div><div class="lbl">Pending</div></div>
+      <div class="stat-card"><div class="num" id="bs-book">—</div><div class="lbl">Booked</div></div>
+      <div class="stat-card"><div class="num">72</div><div class="lbl">Total Seats</div></div>
+      <div class="stat-card" style="display:flex;align-items:center;justify-content:center;">
+        <button onclick="resetAllSeats()" style="background:var(--danger);color:#fff;border:none;padding:10px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.82rem;">⚠ Reset All Seats</button>
+      </div>
+    </div>
+    <div class="bus-admin-grid">
+      <div class="bus-wrap">
+        <h3>Click a seat to edit it</h3>
+        <div class="bus-exterior-admin">
+          <div class="driver-row"><i class="fa-solid fa-dharmachakra"></i> <span>Driver</span></div>
+          <div id="adminSeatMap" class="bus-grid"></div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:0.82rem;color:#555;">
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;background:#4caf50;border-radius:3px;display:inline-block;"></span> Available</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;background:var(--warning);border-radius:3px;display:inline-block;"></span> Pending</span>
+          <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;background:var(--danger);border-radius:3px;display:inline-block;"></span> Booked</span>
+        </div>
+      </div>
+      <div class="console-card">
+        <h3>Seat Editor</h3>
+        <p style="color:#aaa;font-size:0.88rem;" id="consoleHint">Select a seat on the bus to edit it.</p>
+        <div id="seatEditor" style="display:none;">
+          <div class="seat-badge">SEAT #<span id="editSeatNum">—</span></div>
+          <div class="cg"><label>Occupant Name</label><input type="text" id="editName" placeholder="Full name"></div>
+          <div class="cg"><label>Status</label>
+            <select id="editStatus">
+              <option value="available">Available (Green)</option>
+              <option value="pending">Pending (Yellow)</option>
+              <option value="booked">Booked (Red)</option>
+            </select>
+          </div>
+          <div class="cg"><label>Destination</label><input type="text" id="editDest" placeholder="e.g. Mzuzu"></div>
+          <div style="display:flex;gap:10px;margin-top:6px;">
+            <button class="btn-save" style="flex:2;" onclick="saveSeatEdit()">UPDATE SEAT</button>
+            <button class="btn btn-delete" onclick="clearSeat()">RESET</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS PANEL -->
+  <div id="panel-users" class="panel">
+    <div class="stats-row">
+      <div class="stat-card"><div class="num" id="us-total">—</div><div class="lbl">Total Users</div></div>
+    </div>
+    <div class="table-card">
+      <div class="table-card-header">
+        <h3>Registered Users</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <input class="search-input" type="text" placeholder="Search name..." oninput="filterTable('usersTable',this.value,0)">
+          <button class="btn btn-add" onclick="openAddUserModal()"><i class="fa-solid fa-plus"></i> Add User</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="usersTable">
+          <thead><tr><th>Full Name</th><th>Phone</th><th>Reg Number</th><th>Student ID</th><th>Date</th><th>Action</th></tr></thead>
+          <tbody id="usersTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOKINGS PANEL -->
+  <div id="panel-bookings" class="panel">
+    <div class="stats-row">
+      <div class="stat-card"><div class="num" id="bk-pending">—</div><div class="lbl">Pending</div></div>
+      <div class="stat-card"><div class="num" id="bk-approved">—</div><div class="lbl">Approved</div></div>
+      <div class="stat-card"><div class="num" id="bk-rejected">—</div><div class="lbl">Rejected</div></div>
+    </div>
+    <div class="table-card">
+      <div class="table-card-header">
+        <h3>Bookings &amp; Approvals</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <input class="search-input" type="text" placeholder="Search passenger..." oninput="filterTable('bookingsTable',this.value,0)">
+          <button class="btn btn-add" onclick="openAddBookingModal()"><i class="fa-solid fa-plus"></i> Add Booking</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="bookingsTable">
+          <thead><tr><th>Passenger</th><th>Seat</th><th>Destination</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="bookingsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div id="panel-settings" class="panel">
+
+    <!-- TRIP SETTINGS -->
+    <div class="settings-card" style="margin-bottom:22px;">
+      <h3>Trip Settings</h3>
+      <div class="settings-grid">
+        <div>
+          <label class="settings-label">Booking Label (e.g. "Booking")</label>
+          <input class="settings-input" type="text" id="setLabel" placeholder="Booking">
+        </div>
+        <div>
+          <label class="settings-label">Booking Fee</label>
+          <input class="settings-input" type="text" id="setFee" placeholder="K5,000">
+        </div>
+        <div>
+          <label class="settings-label">Departure Date</label>
+          <input class="settings-input" type="text" id="setDate" placeholder="15 March 2025">
+        </div>
+        <div>
+          <label class="settings-label">Departure Time</label>
+          <input class="settings-input" type="text" id="setTime" placeholder="18:00 hrs">
+        </div>
+        <div class="full">
+          <label class="settings-label">Departure Venue</label>
+          <input class="settings-input" type="text" id="setVenue" placeholder="MUBAS Main Gate">
+        </div>
+      </div>
+      <button class="btn-save" style="margin-top:20px;" onclick="saveSettings()">SAVE TRIP SETTINGS</button>
+      <div id="settingsSaved" style="display:none;background:#e6f4ea;color:#2e7d32;padding:12px;border-radius:6px;margin-top:14px;font-weight:700;">✅ Settings saved successfully!</div>
+    </div>
+
+    <!-- PAYMENT DETAILS SETTINGS -->
+    <div class="settings-card" style="margin-bottom:22px;">
+      <h3>💳 Payment Details</h3>
+      <p style="color:#888;font-size:0.85rem;margin-bottom:18px;">These appear on the payment upload page so students know exactly where to send money. Double-check every detail carefully.</p>
+      <div class="settings-grid">
+        <div>
+          <label class="settings-label">National Bank Account Number</label>
+          <input class="settings-input" type="text" id="setNB" placeholder="e.g. 1012168938">
+        </div>
+        <div>
+          <label class="settings-label">Airtel Money Number</label>
+          <input class="settings-input" type="text" id="setAirtel" placeholder="e.g. 0999 261 665">
+        </div>
+        <div>
+          <label class="settings-label">TNM Mpamba Number</label>
+          <input class="settings-input" type="text" id="setTNM" placeholder="e.g. 0881 730 203">
+        </div>
+        <div>
+          <label class="settings-label">Account Name (must be exact)</label>
+          <input class="settings-input" type="text" id="setAcctName" placeholder="e.g. PETROS MWAKHWAWA">
+        </div>
+      </div>
+      <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:12px;margin-top:14px;font-size:0.82rem;color:#7b5c00;">
+        ⚠ <strong>Warning:</strong> Incorrect payment details will cause students to send money to the wrong account. Verify before saving.
+      </div>
+      <button class="btn-save" style="margin-top:16px;" onclick="savePaymentDetails()">SAVE PAYMENT DETAILS</button>
+      <div id="paymentSaved" style="display:none;background:#e6f4ea;color:#2e7d32;padding:12px;border-radius:6px;margin-top:14px;font-weight:700;">✅ Payment details saved!</div>
+    </div>
+
+    <!-- ADMIN PASSWORD MANAGEMENT -->
+    <div class="settings-card">
+      <h3>🔐 Admin Password Management</h3>
+
+      <!-- Change own password -->
+      <div style="border:1px solid #eee;border-radius:8px;padding:20px;margin-bottom:18px;">
+        <h4 style="color:var(--primary);margin-bottom:14px;font-size:1rem;">Change Your Password</h4>
+        <div class="settings-grid">
+          <div class="full">
+            <label class="settings-label">Current Password</label>
+            <input class="settings-input" type="password" id="currPass" placeholder="Enter your current password">
+          </div>
+          <div>
+            <label class="settings-label">New Password</label>
+            <input class="settings-input" type="password" id="newPass" placeholder="New password (min 4 chars)">
+          </div>
+          <div>
+            <label class="settings-label">Confirm New Password</label>
+            <input class="settings-input" type="password" id="confirmPass" placeholder="Repeat new password">
+          </div>
+        </div>
+        <button class="btn-save" style="margin-top:14px;" onclick="changePassword()">CHANGE MY PASSWORD</button>
+        <div id="passMsg" style="display:none;padding:12px;border-radius:6px;margin-top:12px;font-weight:700;font-size:0.9rem;"></div>
+      </div>
+
+      <!-- Reset other admin password -->
+      <div style="border:1px solid #fdecea;border-radius:8px;padding:20px;background:#fffafa;">
+        <h4 style="color:var(--danger);margin-bottom:8px;font-size:1rem;">Reset Another Admin to Default Password</h4>
+        <p style="font-size:0.82rem;color:#888;margin-bottom:14px;">This resets the selected admin back to their original default password. Use this if an admin is locked out.</p>
+        <div>
+          <label class="settings-label">Select Admin to Reset</label>
+          <select class="settings-input" id="resetTarget" style="margin-bottom:12px;">
+            <option value="">-- Select Admin --</option>
+            <option value="0981136268">Golden Cephas (0981136268)</option>
+            <option value="0881730203">Emmanuel Soyo (0881730203)</option>
+          </select>
+        </div>
+        <button style="background:var(--danger);color:#fff;border:none;padding:11px 22px;border-radius:6px;font-weight:700;cursor:pointer;" onclick="resetAdminPassword()">RESET TO DEFAULT PASSWORD</button>
+        <div id="resetMsg" style="display:none;padding:12px;border-radius:6px;margin-top:12px;font-weight:700;font-size:0.9rem;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal-box">
+    <h3>Add User Manually</h3>
+    <div class="cg"><label>Full Name</label><input type="text" id="mu-name" class="settings-input" placeholder="Full Name"></div>
+    <div class="cg"><label>Phone</label><input type="text" id="mu-phone" class="settings-input" placeholder="099..."></div>
+    <div class="cg"><label>Registration Number</label><input type="text" id="mu-reg" class="settings-input" placeholder="BEEE/22/EE/01"></div>
+    <div class="cg"><label>Password</label><input type="text" id="mu-pass" class="settings-input" placeholder="Temporary password"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="addUser()">ADD USER</button>
+      <button class="btn-cancel" onclick="closeModal('addUserModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BOOKING MODAL -->
+<div class="modal-overlay" id="addBookingModal">
+  <div class="modal-box">
+    <h3>Add Booking Manually</h3>
+    <div class="cg"><label>Passenger Name</label><input type="text" id="mb-name" class="settings-input" placeholder="Full Name"></div>
+    <div class="cg"><label>Phone</label><input type="text" id="mb-phone" class="settings-input" placeholder="099..."></div>
+    <div class="cg"><label>Seat Number (1-72)</label><input type="number" id="mb-seat" class="settings-input" min="1" max="72"></div>
+    <div class="cg"><label>Destination</label><input type="text" id="mb-dest" class="settings-input" placeholder="Mzuzu"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="addBooking()">ADD BOOKING</button>
+      <button class="btn-cancel" onclick="closeModal('addBookingModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT PROOF MODAL -->
+<div class="modal-overlay" id="proofModal">
+  <div class="modal-box">
+    <h3>Payment Proof</h3>
+    <img class="proof-img" id="proofImg" alt="Payment proof">
+    <button class="btn-cancel" style="margin-top:16px;" onclick="closeModal('proofModal')">Close</button>
+  </div>
+</div>
+
+<script>
+let currentSeatNum=null;
+
+// Auth guard
+(async()=>{
+  const r=await fetch("/api/session");const d=await r.json();
+  if(!d.loggedIn||d.user.role!=="admin"){alert("Admin access only.");window.location.href="Book-Login.html";return;}
+  document.getElementById("adminWelcome").textContent="Welcome, "+d.user.fullName;
+  loadAll();
+})();
+
+async function loadAll(){await Promise.all([loadBus(),loadUsers(),loadBookings(),loadSettings()]);}
+
+/* ── PANELS ── */
+const PANEL_TITLES={bus:"Bus Layout & Seat Control",users:"Registered Users",bookings:"Pending Approvals",settings:"Site Settings"};
+function showPanel(name){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-link").forEach(l=>l.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  event.currentTarget.classList.add("active");
+  document.getElementById("panelTitle").textContent=PANEL_TITLES[name];
+  if(name==="bus") loadBus();
+  if(name==="users") loadUsers();
+  if(name==="bookings") loadBookings();
+  if(name==="settings") loadSettings();
+}
+
+/* ── BUS ── */
+async function loadBus(){
+  const r=await fetch("/api/seats");const seats=await r.json();
+  const map=document.getElementById("adminSeatMap");map.innerHTML="";
+  let cnt={available:0,pending:0,booked:0};
+  let counter=1;
+  for(let row=0;row<13;row++){
+    for(let col=1;col<=6;col++){
+      if(col===3){const a=document.createElement("div");a.className="seat aisle-space";map.appendChild(a);}
+      else if(counter<=65){renderAdminSeat(seats,counter,map,cnt);counter++;}
+    }
+  }
+  const back=document.createElement("div");back.className="back-row-container";
+  for(let i=0;i<7;i++){renderAdminSeat(seats,counter,back,cnt);counter++;}
+  map.appendChild(back);
+  document.getElementById("bs-avail").textContent=cnt.available;
+  document.getElementById("bs-pend").textContent=cnt.pending;
+  document.getElementById("bs-book").textContent=cnt.booked;
+}
+
+function renderAdminSeat(seats,num,parent,cnt){
+  const data=seats.find(s=>s.number===num)||{number:num,status:"available"};
+  const div=document.createElement("div");
+  const st=data.status==="taken"?"booked":data.status;
+  div.className="seat "+st;
+  div.textContent=num;
+  if(cnt[st]!==undefined) cnt[st]++;
+  div.title=data.passengerName?`${data.passengerName} (${st})`:`Seat ${num} (${st})`;
+  div.onclick=()=>openSeatEditor(num,data);
+  parent.appendChild(div);
+}
+
+function openSeatEditor(num,data){
+  currentSeatNum=num;
+  document.getElementById("editSeatNum").textContent=num;
+  document.getElementById("editName").value=data.passengerName||"";
+  document.getElementById("editStatus").value=data.status==="taken"?"booked":(data.status||"available");
+  document.getElementById("editDest").value=data.destination||"";
+  document.getElementById("consoleHint").style.display="none";
+  document.getElementById("seatEditor").style.display="block";
+  // Highlight
+  document.querySelectorAll("#adminSeatMap .seat, #adminSeatMap .back-row-container .seat").forEach(s=>s.classList.remove("selected-admin"));
+  event.currentTarget.classList.add("selected-admin");
+}
+
+async function saveSeatEdit(){
+  const status=document.getElementById("editStatus").value;
+  const name=document.getElementById("editName").value.trim();
+  const dest=document.getElementById("editDest").value.trim();
+  if(status!=="available"&&!name){alert("Please enter an occupant name.");return;}
+  const r=await fetch("/api/admin/seats/"+currentSeatNum,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,passengerName:name,destination:dest})});
+  const d=await r.json();
+  if(d.success){loadBus();loadBookings();}
+  else alert("Error updating seat.");
+}
+
+async function clearSeat(){
+  if(!confirm(`Reset Seat ${currentSeatNum} to Available?`)) return;
+  await fetch("/api/admin/seats/"+currentSeatNum,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"available",passengerName:"",destination:""})});
+  document.getElementById("seatEditor").style.display="none";
+  document.getElementById("consoleHint").style.display="block";
+  loadBus();loadBookings();
+}
+
+/* ── USERS ── */
+async function loadUsers(){
+  const r=await fetch("/api/admin/users");const users=await r.json();
+  document.getElementById("us-total").textContent=users.length;
+  const tbody=document.getElementById("usersTbody");tbody.innerHTML="";
+  if(!users.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No users registered yet.</td></tr>';return;}
+  users.forEach(u=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><strong>${u.fullName}</strong></td><td>${u.phone}</td><td>${u.regNumber}</td>
+    <td>${u.studentID?`<a href="/uploads/studentIDs/${u.studentID}" target="_blank" style="color:var(--accent);font-weight:700;">View ID</a>`:"None"}</td>
+    <td style="font-size:0.78rem;color:#888;">${u.createdAt?new Date(u.createdAt).toLocaleDateString():"-"}</td>
+    <td><button class="btn btn-delete" onclick="deleteUser('${u.id}','${u.fullName}')"><i class="fa-solid fa-trash"></i></button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function deleteUser(id,name){
+  if(!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+  await fetch("/api/admin/users/"+id,{method:"DELETE"});
+  loadUsers();
+}
+
+function openAddUserModal(){document.getElementById("addUserModal").style.display="flex";}
+function closeModal(id){document.getElementById(id).style.display="none";}
+async function addUser(){
+  const name=document.getElementById("mu-name").value.trim();
+  const phone=document.getElementById("mu-phone").value.trim();
+  const reg=document.getElementById("mu-reg").value.trim();
+  const pass=document.getElementById("mu-pass").value.trim();
+  if(!name||!phone||!reg) return alert("Please fill all fields.");
+  const r=await fetch("/api/admin/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fullName:name,phone,regNumber:reg,password:pass||"changeme"})});
+  const d=await r.json();
+  if(d.success){closeModal("addUserModal");loadUsers();}
+  else alert(d.message||"Error.");
+}
+
+/* ── BOOKINGS ── */
+async function loadBookings(){
+  const r=await fetch("/api/admin/bookings");const bks=await r.json();
+  const pending=bks.filter(b=>b.status==="pending").length;
+  const approved=bks.filter(b=>b.status==="approved").length;
+  const rejected=bks.filter(b=>b.status==="rejected").length;
+  document.getElementById("bk-pending").textContent=pending;
+  document.getElementById("bk-approved").textContent=approved;
+  document.getElementById("bk-rejected").textContent=rejected;
+  // Badge
+  const badge=document.getElementById("pendingBadge");
+  badge.textContent=pending;badge.style.display=pending>0?"inline-block":"none";
+  const tbody=document.getElementById("bookingsTbody");tbody.innerHTML="";
+  if(!bks.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No bookings yet.</td></tr>';return;}
+  bks.forEach(b=>{
+    const tr=document.createElement("tr");
+    const badgeClass=b.status==="pending"?"badge-pending":b.status==="approved"?"badge-approved":"badge-rejected";
+    tr.innerHTML=`<td><strong>${b.passengerName}</strong><br><span style="font-size:0.75rem;color:#888;">${b.phone||""}</span></td>
+    <td><strong>Seat ${b.seatNumber}</strong></td>
+    <td>${b.destination||"—"}</td>
+    <td>${b.paymentProof?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewProof('${b.paymentProof}')"><i class="fa-solid fa-image"></i> View</button>`:"None"}</td>
+    <td><span class="${badgeClass}">${b.status.toUpperCase()}</span></td>
+    <td style="display:flex;gap:5px;flex-wrap:wrap;">
+      ${b.status==="pending"?`<button class="btn btn-approve" onclick="approveBooking('${b.id}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-reject" onclick="rejectBooking('${b.id}')"><i class="fa-solid fa-xmark"></i></button>`:""}
+      <button class="btn btn-delete" onclick="deleteBooking('${b.id}')"><i class="fa-solid fa-trash"></i></button>
+    </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function approveBooking(id){
+  await fetch("/api/admin/approve/"+id,{method:"POST"});
+  loadBookings();loadBus();
+}
+async function rejectBooking(id){
+  await fetch("/api/admin/reject/"+id,{method:"POST"});
+  loadBookings();loadBus();
+}
+async function deleteBooking(id){
+  if(!confirm("Delete this booking record?")) return;
+  await fetch("/api/admin/bookings/"+id,{method:"DELETE"});
+  loadBookings();loadBus();
+}
+
+function viewProof(filename){
+  const img=document.getElementById("proofImg");
+  img.src="/uploads/payments/"+filename;
+  img.style.display="block";
+  document.getElementById("proofModal").style.display="flex";
+}
+
+function openAddBookingModal(){document.getElementById("addBookingModal").style.display="flex";}
+async function addBooking(){
+  const name=document.getElementById("mb-name").value.trim();
+  const phone=document.getElementById("mb-phone").value.trim();
+  const seat=document.getElementById("mb-seat").value;
+  const dest=document.getElementById("mb-dest").value.trim();
+  if(!name||!seat) return alert("Passenger name and seat are required.");
+  const r=await fetch("/api/admin/bookings/add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({passengerName:name,phone,seatNumber:Number(seat),destination:dest})});
+  const d=await r.json();
+  if(d.success){closeModal("addBookingModal");loadBookings();loadBus();}
+  else alert(d.message||"Error adding booking.");
+}
+
+/* ── SETTINGS ── */
+async function loadSettings(){
+  const r=await fetch("/api/settings");const s=await r.json();
+  document.getElementById("setLabel").value   = s.bookingLabel   || "";
+  document.getElementById("setFee").value     = s.bookingFee     || "";
+  document.getElementById("setDate").value    = s.departureDate  || "";
+  document.getElementById("setTime").value    = s.departureTime  || "";
+  document.getElementById("setVenue").value   = s.departureVenue || "";
+  document.getElementById("setNB").value      = s.payNationalBank  || "";
+  document.getElementById("setAirtel").value  = s.payAirtelMoney   || "";
+  document.getElementById("setTNM").value     = s.payTNMMpamba     || "";
+  document.getElementById("setAcctName").value= s.payAccountName   || "";
+}
+
+async function saveSettings(){
+  const data={
+    bookingLabel:  document.getElementById("setLabel").value.trim(),
+    bookingFee:    document.getElementById("setFee").value.trim(),
+    departureDate: document.getElementById("setDate").value.trim(),
+    departureTime: document.getElementById("setTime").value.trim(),
+    departureVenue:document.getElementById("setVenue").value.trim()
+  };
+  const r=await fetch("/api/admin/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+  const d=await r.json();
+  const msg=document.getElementById("settingsSaved");
+  if(d.success){msg.style.display="block";setTimeout(()=>msg.style.display="none",3000);}
+  else alert("Error saving settings.");
+}
+
+async function savePaymentDetails(){
+  const nb      = document.getElementById("setNB").value.trim();
+  const airtel  = document.getElementById("setAirtel").value.trim();
+  const tnm     = document.getElementById("setTNM").value.trim();
+  const acct    = document.getElementById("setAcctName").value.trim();
+  if(!nb&&!airtel&&!tnm&&!acct){alert("Please enter at least one payment detail.");return;}
+  const data={payNationalBank:nb,payAirtelMoney:airtel,payTNMMpamba:tnm,payAccountName:acct};
+  const r=await fetch("/api/admin/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+  const d=await r.json();
+  const msg=document.getElementById("paymentSaved");
+  if(d.success){msg.style.display="block";setTimeout(()=>msg.style.display="none",3000);}
+  else alert("Error saving payment details.");
+}
+
+/* ── ADMIN PASSWORD MANAGEMENT ── */
+async function changePassword(){
+  const curr    = document.getElementById("currPass").value;
+  const newP    = document.getElementById("newPass").value;
+  const confirm = document.getElementById("confirmPass").value;
+  const msg     = document.getElementById("passMsg");
+  msg.style.display="none";
+  if(!curr||!newP||!confirm){showPassMsg("error","Please fill in all password fields.");return;}
+  if(newP.length<4){showPassMsg("error","New password must be at least 4 characters.");return;}
+  if(newP!==confirm){showPassMsg("error","New passwords do not match.");return;}
+  const r=await fetch("/api/admin/change-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({currentPassword:curr,newPassword:newP})});
+  const d=await r.json();
+  if(d.success){
+    showPassMsg("success","✅ Password changed successfully! Use your new password next login.");
+    document.getElementById("currPass").value="";
+    document.getElementById("newPass").value="";
+    document.getElementById("confirmPass").value="";
+  } else {
+    showPassMsg("error",d.message||"Error changing password.");
+  }
+}
+
+function showPassMsg(type,text){
+  const m=document.getElementById("passMsg");
+  m.style.display="block";
+  m.style.background=type==="success"?"#e6f4ea":"#fdecea";
+  m.style.color=type==="success"?"#2e7d32":"#b71c1c";
+  m.textContent=text;
+}
+
+async function resetAdminPassword(){
+  const target=document.getElementById("resetTarget").value;
+  const msg=document.getElementById("resetMsg");
+  if(!target){msg.style.display="block";msg.style.background="#fdecea";msg.style.color="#b71c1c";msg.textContent="Please select an admin to reset.";return;}
+  const name=document.getElementById("resetTarget").options[document.getElementById("resetTarget").selectedIndex].text;
+  if(!confirm("Reset password for "+name+" to their default? They must be informed of the change.")) return;
+  const r=await fetch("/api/admin/reset-admin-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({targetPhone:target})});
+  const d=await r.json();
+  msg.style.display="block";
+  if(d.success){msg.style.background="#e6f4ea";msg.style.color="#2e7d32";msg.textContent="✅ "+d.message;}
+  else{msg.style.background="#fdecea";msg.style.color="#b71c1c";msg.textContent=d.message||"Error resetting password.";}
+}
+
+/* ── SEARCH ── */
+function filterTable(tableId,query,col){
+  const q=query.toLowerCase();
+  document.querySelectorAll("#"+tableId+" tbody tr").forEach(tr=>{
+    const cell=tr.children[col];
+    tr.style.display=cell&&cell.textContent.toLowerCase().includes(q)?"":"none";
+  });
+}
+
+/* ── RESET SEATS ── */
+async function resetAllSeats(){
+  if(!confirm("WARNING: This will reset ALL 72 seats to available and clear all booking records. Are you absolutely sure?")) return;
+  if(!confirm("Second confirmation: ALL booking data will be lost permanently. Continue?")) return;
+  const r=await fetch("/api/admin/reset-seats",{method:"POST"});
+  const d=await r.json();
+  if(d.success){alert("All seats have been reset.");loadAll();}
+  else alert("Error resetting seats.");
+}
+
+/* ── LOGOUT ── */
+async function adminLogout(){
+  await fetch("/api/logout");localStorage.clear();window.location.href="Home-Page.html";
+}
+
+// Close modals on overlay click
+document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",function(e){if(e.target===this)this.style.display="none";}));
+</script>
+</body>
+</html>

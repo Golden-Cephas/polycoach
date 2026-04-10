@@ -1,0 +1,445 @@
+/* =========================================
+   POLYCOACH BUS SEAT LAYOUT
+========================================= */
+
+
+/* PAGE BODY */
+
+.Bus-Lay-Page-Body {
+
+    background-image: linear-gradient(rgba(11,41,77,0.85), rgba(11,41,77,0.7)),
+                      url('../Images/Mzimba.png');
+
+    background-size: cover;
+    background-position: center;
+
+    min-height: 85vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 60px 0;
+}
+
+
+
+/* MAIN CONTAINER */
+
+.bus-container {
+
+    width: 95%;
+    max-width: 1100px;
+
+    margin: auto;
+
+}
+
+
+
+/* PAGE TITLE */
+
+.bus-title {
+
+    text-align: center;
+    color: white;
+
+    margin-bottom: 30px;
+
+}
+
+.bus-title h1 {
+
+    font-size: 2.5rem;
+    font-weight: 800;
+
+}
+
+.bus-title p {
+
+    font-size: 1.1rem;
+    margin-top: 10px;
+
+}
+
+
+
+/* BUS CARD */
+
+.bus-card {
+
+    background: rgba(255,255,255,0.95);
+
+    padding: 40px;
+
+    border-radius: 14px;
+
+    box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+
+}
+
+
+
+/* DRIVER SECTION */
+
+.driver-area {
+
+    text-align: center;
+
+    margin-bottom: 20px;
+
+    font-weight: 700;
+
+    color: #0b294d;
+
+}
+
+
+
+/* SEAT GRID */
+
+.seat-layout {
+
+    display: grid;
+
+    grid-template-columns: repeat(4,1fr);
+
+    gap: 15px;
+
+    justify-items: center;
+
+}
+
+
+
+/* AISLE GAP */
+
+.seat-layout .aisle {
+
+    visibility: hidden;
+
+}
+
+
+
+/* SEAT STYLE */
+
+.seat {
+
+    width: 55px;
+    height: 55px;
+
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: all 0.25s ease;
+
+    background-color: #e8edf2;
+
+}
+
+
+
+/* AVAILABLE SEAT */
+
+.seat.available {
+
+    background-color: #dfe8f1;
+
+}
+
+.seat.available:hover {
+
+    background-color: #0099ff;
+    color: white;
+
+}
+
+
+
+/* SELECTED SEAT */
+
+.seat.selected {
+
+    background-color: #0b294d;
+    color: white;
+
+}
+
+
+
+/* PENDING PAYMENT */
+
+.seat.pending {
+
+    background-color: orange;
+    color: white;
+
+}
+
+
+
+/* CONFIRMED BOOKING */
+
+.seat.booked {
+
+    background-color: #28a745;
+    color: white;
+
+    cursor: not-allowed;
+
+}
+
+
+
+/* LEGEND */
+
+.seat-legend {
+
+    margin-top: 30px;
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 30px;
+
+    flex-wrap: wrap;
+
+}
+
+
+
+.legend-item {
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+
+
+.legend-box {
+
+    width: 20px;
+    height: 20px;
+
+    border-radius: 4px;
+
+}
+
+
+
+.legend-available {
+
+    background: #dfe8f1;
+
+}
+
+.legend-selected {
+
+    background: #0b294d;
+
+}
+
+.legend-pending {
+
+    background: orange;
+
+}
+
+.legend-booked {
+
+    background: #28a745;
+
+}
+
+
+
+/* ACTION BUTTON AREA */
+
+.booking-actions {
+
+    margin-top: 35px;
+
+    text-align: center;
+
+}
+
+
+
+/* CONFIRM BUTTON */
+
+.confirm-seat-btn {
+
+    background: #0b294d;
+
+    color: white;
+
+    border: none;
+
+    border-radius: 6px;
+
+    padding: 15px 35px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.3s;
+
+}
+
+
+
+.confirm-seat-btn:hover {
+
+    background: #0099ff;
+
+}
+
+
+
+/* POPUP CONFIRMATION */
+
+.popup-overlay {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0,0,0,0.65);
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 999;
+
+}
+
+
+
+.popup-box {
+
+    background: white;
+
+    padding: 30px;
+
+    border-radius: 12px;
+
+    max-width: 450px;
+
+    width: 90%;
+
+    text-align: center;
+
+}
+
+
+
+.popup-box h2 {
+
+    color: #0b294d;
+
+    margin-bottom: 15px;
+
+}
+
+
+
+.popup-box p {
+
+    margin-bottom: 20px;
+
+}
+
+
+
+.popup-buttons {
+
+    display: flex;
+
+    gap: 15px;
+
+    justify-content: center;
+
+}
+
+
+
+.popup-btn {
+
+    padding: 10px 20px;
+
+    border-radius: 6px;
+
+    border: none;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+}
+
+
+
+.popup-confirm {
+
+    background: #0b294d;
+    color: white;
+
+}
+
+
+
+.popup-cancel {
+
+    background: #ddd;
+
+}
+
+
+
+/* RESPONSIVE */
+
+@media (max-width:768px){
+
+.seat-layout{
+
+grid-template-columns: repeat(4,1fr);
+
+gap:10px;
+
+}
+
+.seat{
+
+width:45px;
+height:45px;
+
+font-size:0.9rem;
+
+}
+
+.bus-card{
+
+padding:25px;
+
+}
+
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1775796166619",
+    "seatNumber": 3,
+    "passengerName": "PETROS MWAKHWAWA",
+    "destination": "Mzuzu",
+    "phone": "0981136268",
+    "paymentProof": "1775796160320-graphics.jpg",
+    "status": "approved",
+    "createdAt": "2026-04-10T04:42:46.620Z"
+  },
+  {
+    "id": "1775815235653",
+    "seatNumber": 72,
+    "passengerName": "PETROS MWAKHWAWA",
+    "destination": "Mzuzu",
+    "phone": "0981136268",
+    "paymentProof": "1775815226473-graphics.jpg",
+    "status": "pending",
+    "createdAt": "2026-04-10T10:00:35.653Z"
+  }
+]

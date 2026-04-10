@@ -1,0 +1,166 @@
+/* =====================================
+   POLYCOACH - THANKS REMARK PAGE STYLE
+   Thanks-Remark1.css
+===================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+/* Body */
+
+body{
+    background:#f4f6f9;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* Header */
+
+header{
+    width:100%;
+    background:#002147;
+    color:white;
+    padding:15px 30px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+header h1{
+    font-size:22px;
+}
+
+header nav a{
+    color:white;
+    text-decoration:none;
+    margin-left:20px;
+    font-weight:500;
+}
+
+header nav a:hover{
+    text-decoration:underline;
+}
+
+/* Main Section */
+
+.main-container{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:40px 20px;
+}
+
+/* Card */
+
+.thanks-card{
+    background:white;
+    padding:40px;
+    border-radius:10px;
+    width:420px;
+    text-align:center;
+    box-shadow:0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Success Icon */
+
+.success-icon{
+    font-size:60px;
+    color:#28a745;
+    margin-bottom:15px;
+}
+
+/* Title */
+
+.thanks-card h2{
+    font-size:24px;
+    margin-bottom:15px;
+    color:#002147;
+}
+
+/* Message */
+
+.thanks-card p{
+    font-size:15px;
+    color:#444;
+    margin-bottom:25px;
+    line-height:1.6;
+}
+
+/* Button */
+
+.home-btn{
+    display:inline-block;
+    background:#002147;
+    color:white;
+    padding:12px 20px;
+    border-radius:6px;
+    text-decoration:none;
+    font-weight:600;
+    transition:0.3s;
+}
+
+.home-btn:hover{
+    background:#003a7a;
+}
+
+/* Footer */
+
+footer{
+    background:#002147;
+    color:white;
+    text-align:center;
+    padding:15px;
+    font-size:14px;
+}
+
+/* =====================================
+   MOBILE RESPONSIVE
+===================================== */
+
+@media(max-width:768px){
+
+    header{
+        flex-direction:column;
+        text-align:center;
+    }
+
+    header nav{
+        margin-top:10px;
+    }
+
+    .thanks-card{
+        width:95%;
+        padding:30px;
+    }
+
+    .success-icon{
+        font-size:50px;
+    }
+
+}
+
+/* =====================================
+   SMALL MOBILE
+===================================== */
+
+@media(max-width:480px){
+
+    .thanks-card{
+        padding:25px;
+    }
+
+    .thanks-card h2{
+        font-size:20px;
+    }
+
+    .thanks-card p{
+        font-size:14px;
+    }
+
+}

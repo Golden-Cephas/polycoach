@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help — PolyCoach</title>
+<link rel="stylesheet" href="/css/Home-Page.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+.help-body{background:#f0f2f5;padding:48px 20px;}
+.help-container{max-width:860px;margin:0 auto;}
+.help-card{background:#fff;border-radius:12px;padding:36px;margin-bottom:20px;box-shadow:0 3px 12px rgba(0,0,0,0.06);}
+.help-card h2{font-family:'Barlow Condensed',sans-serif;color:var(--primary);font-size:1.6rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+.help-card h2 i{color:var(--accent);}
+.help-card p,.help-card li{color:#555;line-height:1.7;font-size:0.97rem;}
+.help-card ul{padding-left:20px;margin-top:8px;}
+.help-card li{margin-bottom:6px;}
+.contact-card{background:linear-gradient(135deg,var(--primary),#0d3d73);border-radius:12px;padding:36px;color:#fff;margin-bottom:20px;}
+.contact-card h2{font-family:'Barlow Condensed',sans-serif;font-size:1.8rem;font-weight:900;margin-bottom:18px;}
+.contact-card p{line-height:1.8;font-size:1rem;color:#dde;}
+.contact-card strong{color:#fff;}
+</style>
+</head>
+<body>
+<div class="Home-Page-Header">
+  <div class="Left-Header" onclick="location.href='Home-Page.html'"><img src="/Images/Logo1.png" class="Logo1" alt="Logo"><div class="Logo-Text">PolyCoach</div></div>
+  <div class="Right-Header">
+    <button class="Header-Button" onclick="location.href='Home-Page.html'">Home</button>
+    <button class="Header-Button" onclick="location.href='Book-Login.html'">Book</button>
+    <button class="Header-Button" onclick="location.href='Help.html'">Help</button>
+    <button class="Register-Button" onclick="location.href='Register.html'">Register</button>
+  </div>
+</div>
+
+<div class="help-body">
+  <div class="help-container">
+    <h1 style="font-family:'Barlow Condensed',sans-serif;font-size:2.4rem;font-weight:900;color:var(--primary);margin-bottom:24px;text-transform:uppercase;">Help Center</h1>
+
+    <div class="help-card">
+      <h2><i class="fa-solid fa-user-plus"></i> 1. Register</h2>
+      <p>Click <strong>Register</strong> on the Home Page and fill in your details:</p>
+      <ul><li>Full Name</li><li>Registration Number (must contain 3 slashes e.g. BEEE/22/EE/01)</li><li>Phone Number</li><li>Password</li><li>Upload your Student ID photo</li></ul>
+      <p style="margin-top:8px;">After successful registration you will be redirected to the confirmation page and can proceed to booking.</p>
+    </div>
+
+    <div class="help-card">
+      <h2><i class="fa-solid fa-ticket"></i> 2. Booking a Seat</h2>
+      <p>Click <strong>Book</strong>, select your destination, and login. You will then choose whether to book for yourself or another passenger. After that:</p>
+      <ul><li>Upload your <strong>proof of payment</strong> (mobile money screenshot)</li><li>Select your preferred available seat on the bus</li><li>Confirm — your booking will be marked as pending</li></ul>
+    </div>
+
+    <div class="help-card">
+      <h2><i class="fa-solid fa-money-check-dollar"></i> 3. Payment &amp; Verification</h2>
+      <p>Pay the booking fee of <strong>K5,000</strong> via mobile money, then upload your receipt. An administrator will review and approve your booking. This is a <em>booking fee</em> to secure your seat, not the full bus fare.</p>
+    </div>
+
+    <div class="help-card">
+      <h2><i class="fa-solid fa-seat"></i> 4. Viewing Seat Status</h2>
+      <p>Click <strong>View Available Seats</strong> on the Home Page, login, and see the live bus layout. Hover over any seat to see who has booked it.</p>
+    </div>
+
+    <div class="help-card">
+      <h2><i class="fa-solid fa-shield-halved"></i> 5. Admin Dashboard</h2>
+      <p>Administrators can manage the bus layout, approve/reject payments, view all registered users, and configure site settings from the Admin Panel.</p>
+    </div>
+
+    <div class="contact-card">
+      <h2>Need Help?</h2>
+      <p><strong>Email:</strong> polycoachsupport@gmail.com</p>
+      <p><strong>Phone:</strong> +265 881 730 203</p>
+      <p style="margin-top:12px;">Our team is available to assist with registration, booking, or payment verification.</p>
+    </div>
+  </div>
+</div>
+
+<div class="Home-Page-Footer">
+  <div class="Home-Left-Footer"><img src="/Images/Logo3.png" class="Logo1" alt="Logo"><div class="Logo-Text1">PolyCoach</div></div>
+  <div class="Home-Mid-Footer">
+    <button class="Footer-Button" onclick="openPopup('about')">About Us</button>
+    <button class="Footer-Button" onclick="openPopup('faq')">FAQs</button>
+    <button class="Footer-Button" onclick="openPopup('contact')">Contact</button>
+  </div>
+  <div class="Home-Right-Footer"><div class="Footer-Text">Social Media:</div><div class="Social-Container">
+    <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Facebook.png"></div></a>
+    <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Twitter.png"></div></a>
+    <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Whatsapp.png"></div></a>
+  </div></div>
+</div>
+<div id="popupOverlay" class="popup-overlay"><div class="popup-box"><div id="popupContent"></div><button class="close-btn" onclick="closePopup()">Close</button></div></div>
+<script src="/js/popup.js"></script>
+</body>
+</html>
