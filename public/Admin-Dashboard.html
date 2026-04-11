@@ -465,24 +465,57 @@ async function clearSeat(){
 
 /* ── USERS ── */
 async function loadUsers(){
-  const r=await fetch("/api/admin/users");const users=await r.json();
-  document.getElementById("us-total").textContent=users.length;
-  const tbody=document.getElementById("usersTbody");tbody.innerHTML="";
-  if(!users.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No users registered yet.</td></tr>';return;}
-  users.forEach(u=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td><strong>${u.fullName}</strong></td><td>${u.phone}</td><td>${u.regNumber}</td>
-    <td>${u.studentID?`<a href="/uploads/studentIDs/${u.studentID}" target="_blank" style="color:var(--accent);font-weight:700;">View ID</a>`:"None"}</td>
-    <td style="font-size:0.78rem;color:#888;">${u.createdAt?new Date(u.createdAt).toLocaleDateString():"-"}</td>
-    <td><button class="btn btn-delete" onclick="deleteUser('${u.id}','${u.fullName}')"><i class="fa-solid fa-trash"></i></button></td>`;
-    tbody.appendChild(tr);
-  });
+  try{
+    const r=await fetch("/api/admin/users");
+    const users=await r.json();
+    document.getElementById("us-total").textContent=users.length;
+    const tbody=document.getElementById("usersTbody");
+    tbody.innerHTML="";
+    if(!users.length){
+      tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No users registered yet.</td></tr>';
+      return;
+    }
+    users.forEach(u=>{
+      // Use _id (MongoDB field) not .id
+      const uid = u._id || u.id;
+      const tr=document.createElement("tr");
+      tr.id="user-row-"+uid;
+      tr.innerHTML=`<td><strong>${u.fullName}</strong></td><td>${u.phone}</td><td>${u.regNumber}</td>
+      <td>${u.studentID?`<a href="${u.studentID}" target="_blank" style="color:var(--accent);font-weight:700;">View ID</a>`:"None"}</td>
+      <td style="font-size:0.78rem;color:#888;">${u.createdAt?new Date(u.createdAt).toLocaleDateString():"-"}</td>
+      <td><button class="btn btn-delete" id="delbtn-${uid}" onclick="deleteUser('${uid}','${u.fullName}')"><i class="fa-solid fa-trash"></i></button></td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(err){
+    console.error("loadUsers error:",err);
+  }
 }
 
 async function deleteUser(id,name){
-  if(!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
-  await fetch("/api/admin/users/"+id,{method:"DELETE"});
-  loadUsers();
+  if(!confirm('Delete user "'+name+'"? This cannot be undone.')) return;
+  // Grey out the row immediately for instant visual feedback
+  const row=document.getElementById("user-row-"+id);
+  const btn=document.getElementById("delbtn-"+id);
+  if(row) row.style.opacity="0.4";
+  if(btn) btn.disabled=true;
+  try{
+    const r=await fetch("/api/admin/users/"+id,{method:"DELETE"});
+    const d=await r.json();
+    if(d.success){
+      // Remove row from DOM immediately — no need to reload whole table
+      if(row) row.remove();
+      const total=document.getElementById("us-total");
+      total.textContent=Math.max(0,parseInt(total.textContent||"0")-1);
+    } else {
+      alert("Delete failed: "+(d.message||"Unknown error"));
+      if(row) row.style.opacity="1";
+      if(btn) btn.disabled=false;
+    }
+  }catch(err){
+    alert("Network error. Please try again.");
+    if(row) row.style.opacity="1";
+    if(btn) btn.disabled=false;
+  }
 }
 
 function openAddUserModal(){document.getElementById("addUserModal").style.display="flex";}
@@ -515,6 +548,8 @@ async function loadBookings(){
   if(!bks.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No bookings yet.</td></tr>';return;}
   bks.forEach(b=>{
     const tr=document.createElement("tr");
+    const bid=b._id||b.id;
+    tr.id="booking-row-"+bid;
     const badgeClass=b.status==="pending"?"badge-pending":b.status==="approved"?"badge-approved":"badge-rejected";
     tr.innerHTML=`<td><strong>${b.passengerName}</strong><br><span style="font-size:0.75rem;color:#888;">${b.phone||""}</span></td>
     <td><strong>Seat ${b.seatNumber}</strong></td>
@@ -522,8 +557,8 @@ async function loadBookings(){
     <td>${b.paymentProof?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewProof('${b.paymentProof}')"><i class="fa-solid fa-image"></i> View</button>`:"None"}</td>
     <td><span class="${badgeClass}">${b.status.toUpperCase()}</span></td>
     <td style="display:flex;gap:5px;flex-wrap:wrap;">
-      ${b.status==="pending"?`<button class="btn btn-approve" onclick="approveBooking('${b.id}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-reject" onclick="rejectBooking('${b.id}')"><i class="fa-solid fa-xmark"></i></button>`:""}
-      <button class="btn btn-delete" onclick="deleteBooking('${b.id}')"><i class="fa-solid fa-trash"></i></button>
+      ${b.status==="pending"?`<button class="btn btn-approve" onclick="approveBooking('${b._id||b.id}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-reject" onclick="rejectBooking('${b._id||b.id}')"><i class="fa-solid fa-xmark"></i></button>`:""}
+      <button class="btn btn-delete" onclick="deleteBooking('${b._id||b.id}')"><i class="fa-solid fa-trash"></i></button>
     </td>`;
     tbody.appendChild(tr);
   });
@@ -538,9 +573,24 @@ async function rejectBooking(id){
   loadBookings();loadBus();
 }
 async function deleteBooking(id){
-  if(!confirm("Delete this booking record?")) return;
-  await fetch("/api/admin/bookings/"+id,{method:"DELETE"});
-  loadBookings();loadBus();
+  if(!confirm("Delete this booking record? The seat will be freed.")) return;
+  const row=document.getElementById("booking-row-"+id);
+  if(row) row.style.opacity="0.4";
+  try{
+    const r=await fetch("/api/admin/bookings/"+id,{method:"DELETE"});
+    const d=await r.json();
+    if(d.success){
+      if(row) row.remove();
+      loadBookings();
+      loadBus();
+    } else {
+      alert("Delete failed: "+(d.message||"Unknown error"));
+      if(row) row.style.opacity="1";
+    }
+  }catch(err){
+    alert("Network error. Please try again.");
+    if(row) row.style.opacity="1";
+  }
 }
 
 function viewProof(filename){
