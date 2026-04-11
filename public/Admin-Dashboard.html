@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel — PolyCoach</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Lato:wght@400;700&display=swap');
 :root{--primary:#0b294d;--accent:#0099ff;--danger:#e53e3e;--warning:#d69e2e;--success:#28a745;--bg:#f0f2f5;--sidebar:220px;}
@@ -192,6 +194,7 @@ tr:hover td{background:#fafafa;}
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <input class="search-input" type="text" placeholder="Search name..." oninput="filterTable('usersTable',this.value,0)">
           <button class="btn btn-add" onclick="openAddUserModal()"><i class="fa-solid fa-plus"></i> Add User</button>
+          <button class="btn" style="background:#0b294d;color:#fff;padding:9px 18px;border-radius:6px;font-size:0.88rem;cursor:pointer;" onclick="downloadUsersPDF()"><i class="fa-solid fa-file-pdf"></i> Download List</button>
         </div>
       </div>
       <div style="overflow-x:auto;">
@@ -216,6 +219,7 @@ tr:hover td{background:#fafafa;}
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <input class="search-input" type="text" placeholder="Search passenger..." oninput="filterTable('bookingsTable',this.value,0)">
           <button class="btn btn-add" onclick="openAddBookingModal()"><i class="fa-solid fa-plus"></i> Add Booking</button>
+          <button class="btn" style="background:#0b294d;color:#fff;padding:9px 18px;border-radius:6px;font-size:0.88rem;cursor:pointer;" onclick="downloadBusLayoutPDF()"><i class="fa-solid fa-file-pdf"></i> Download Bus Layout</button>
         </div>
       </div>
       <div style="overflow-x:auto;">
@@ -753,6 +757,240 @@ async function resetAllSeats(){
   const d=await r.json();
   if(d.success){alert("All seats have been reset.");loadAll();}
   else alert("Error resetting seats.");
+}
+
+/* ── PDF DOWNLOADS ── */
+
+function pdfHeader(doc, title) {
+  const pw = doc.internal.pageSize.getWidth();
+  // Dark blue header bar
+  doc.setFillColor(11, 41, 77);
+  doc.rect(0, 0, pw, 28, 'F');
+  // White title
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('PolyCoach', 14, 11);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Student Bus Booking System — MUBAS', 14, 19);
+  // Right side title
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, pw - 14, 15, { align: 'right' });
+  // Reset text color
+  doc.setTextColor(0, 0, 0);
+}
+
+function pdfFooter(doc) {
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    // Accent blue footer bar
+    doc.setFillColor(0, 153, 255);
+    doc.rect(0, ph - 18, pw, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Email: polycoachsupport@gmail.com   |   Phone: +265 881 730 203   |   MUBAS, Blantyre, Malawi', pw / 2, ph - 9, { align: 'center' });
+    doc.text('Page ' + i + ' of ' + pageCount, pw - 14, ph - 9, { align: 'right' });
+    doc.text('Generated: ' + new Date().toLocaleDateString(), 14, ph - 9);
+    doc.setTextColor(0, 0, 0);
+  }
+}
+
+async function downloadUsersPDF() {
+  const r = await fetch('/api/admin/users');
+  const users = await r.json();
+  if (!users.length) { alert('No registered users yet.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pw = doc.internal.pageSize.getWidth();
+
+  pdfHeader(doc, 'Registered Users');
+
+  // Date line
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Printed: ' + new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }), 14, 36);
+  doc.text('Total Students: ' + users.length, pw - 14, 36, { align: 'right' });
+
+  // Table
+  const rows = users.map((u, i) => [
+    i + 1,
+    u.fullName || '',
+    u.regNumber || '',
+    u.phone || ''
+  ]);
+
+  doc.autoTable({
+    startY: 40,
+    head: [['#', 'Full Name', 'Registration Number', 'Phone']],
+    body: rows,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [11, 41, 77],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 10
+    },
+    bodyStyles: {
+      fontSize: 9,
+      textColor: [0, 0, 0]
+    },
+    alternateRowStyles: { fillColor: [245, 247, 250] },
+    columnStyles: {
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 60 },
+      3: { cellWidth: 40 }
+    },
+    margin: { left: 14, right: 14, bottom: 22 },
+    didDrawPage: () => pdfHeader(doc, 'Registered Users')
+  });
+
+  pdfFooter(doc);
+  doc.save('PolyCoach_Registered_Users_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+async function downloadBusLayoutPDF() {
+  const r = await fetch('/api/seats');
+  const seats = await r.json();
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+
+  pdfHeader(doc, 'Bus Seat Layout');
+
+  // Subtitle
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  const booked = seats.filter(s => s.status === 'booked' || s.status === 'pending').length;
+  const available = seats.filter(s => s.status === 'available').length;
+  doc.text('Printed: ' + new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }), 14, 36);
+  doc.text('Booked/Pending: ' + booked + '   |   Available: ' + available + '   |   Total: 72 seats', pw - 14, 36, { align: 'right' });
+
+  // Build 72-seat grid: 2 cols + aisle + 3 cols = 5 cols per row, 13 rows + back row of 7
+  const startX = 14;
+  const startY = 42;
+  const cellW = 44;
+  const cellH = 9;
+  const aisleW = 8;
+  const gap = 1;
+
+  // Column X positions: 2 left + aisle + 3 right
+  const colX = [
+    startX,
+    startX + cellW + gap,
+    // aisle gap here
+    startX + cellW * 2 + gap * 2 + aisleW,
+    startX + cellW * 3 + gap * 3 + aisleW,
+    startX + cellW * 4 + gap * 4 + aisleW,
+  ];
+
+  // Legend
+  const legendY = startY - 2;
+  [[11,41,77,'Booked'],[180,180,180,'Available'],[214,158,46,'Pending']].forEach((item, i) => {
+    const lx = pw - 120 + i * 40;
+    doc.setFillColor(item[0], item[1], item[2]);
+    doc.rect(lx, legendY - 3, 6, 4, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(0,0,0);
+    doc.text(item[3], lx + 8, legendY);
+  });
+
+  let seatIdx = 0;
+  const seatList = [...seats].sort((a,b) => a.number - b.number);
+
+  function drawSeat(seat, x, y) {
+    const status = seat ? seat.status : 'available';
+    const name = seat && seat.passengerName ? seat.passengerName : '';
+    const num = seat ? seat.number : '';
+
+    // Background
+    if (status === 'booked') doc.setFillColor(11, 41, 77);
+    else if (status === 'pending') doc.setFillColor(214, 158, 46);
+    else doc.setFillColor(220, 220, 220);
+
+    doc.roundedRect(x, y, cellW, cellH, 1, 1, 'F');
+
+    // Seat number
+    if (status === 'booked') doc.setTextColor(255, 255, 255);
+    else doc.setTextColor(0, 0, 0);
+
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(num), x + 2, y + 3.5);
+
+    // Passenger name
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    const displayName = name.length > 18 ? name.substring(0, 17) + '.' : name;
+    doc.text(displayName, x + cellW / 2, y + 6.5, { align: 'center' });
+
+    doc.setTextColor(0, 0, 0);
+  }
+
+  // Driver row
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(startX, startY - 8, pw - startX * 2, 6, 1, 1, 'F');
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(80, 80, 80);
+  doc.text('DRIVER', pw / 2, startY - 4, { align: 'center' });
+  doc.setTextColor(0,0,0);
+
+  // 13 rows × (2 + aisle + 3)
+  for (let row = 0; row < 13; row++) {
+    const y = startY + row * (cellH + gap);
+    const cols = [0, 1, 2, 3, 4]; // 5 seats per row
+    cols.forEach((col, ci) => {
+      if (seatIdx < 65) {
+        drawSeat(seatList[seatIdx], colX[col], y);
+        seatIdx++;
+      }
+    });
+  }
+
+  // Back row — 7 seats spread across full width
+  const backY = startY + 13 * (cellH + gap) + 4;
+  const backCellW = (pw - startX * 2 - gap * 6) / 7;
+  for (let i = 0; i < 7; i++) {
+    const bx = startX + i * (backCellW + gap);
+    if (seatIdx < 72) {
+      const seat = seatList[seatIdx];
+      const status = seat ? seat.status : 'available';
+      const name = seat && seat.passengerName ? seat.passengerName : '';
+      if (status === 'booked') doc.setFillColor(11, 41, 77);
+      else if (status === 'pending') doc.setFillColor(214, 158, 46);
+      else doc.setFillColor(220, 220, 220);
+      doc.roundedRect(bx, backY, backCellW, cellH, 1, 1, 'F');
+      if (status === 'booked') doc.setTextColor(255, 255, 255);
+      else doc.setTextColor(0, 0, 0);
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(seat.number), bx + 2, backY + 3.5);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'normal');
+      const dn = name.length > 14 ? name.substring(0,13)+'.' : name;
+      doc.text(dn, bx + backCellW/2, backY + 6.5, { align: 'center' });
+      doc.setTextColor(0,0,0);
+      seatIdx++;
+    }
+  }
+
+  // Back row label
+  doc.setFontSize(7);
+  doc.setTextColor(100,100,100);
+  doc.text('BACK ROW', pw/2, backY - 2, { align:'center' });
+
+  pdfFooter(doc);
+  doc.save('PolyCoach_Bus_Layout_' + new Date().toISOString().slice(0,10) + '.pdf');
 }
 
 /* ── LOGOUT ── */
