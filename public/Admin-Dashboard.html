@@ -1158,7 +1158,8 @@ function drawSeatPDF(doc, seats, num, x, y, w, h){
 
 /* ════════════════════════════════════════
    BUILD BUS LAYOUT PDF
-   Called by both Bus panel and Bookings panel
+   Page height auto-calculated to fit
+   the full bus — nothing cut off
 ════════════════════════════════════════ */
 async function buildBusLayoutPDF(){
   const seats    = await (await fetch("/api/seats")).json();
@@ -1166,15 +1167,57 @@ async function buildBusLayoutPDF(){
   const logo     = await loadLogo2();
   const {jsPDF}  = window.jspdf;
 
-  // Portrait A4
-  const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-  const pW  = doc.internal.pageSize.getWidth();   // 210
-  const pH  = doc.internal.pageSize.getHeight();  // 297
   const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+
+  // ── BUS DIMENSIONS (fixed, comfortable) ──
+  const seatW  = 28;
+  const seatH  = 15;
+  const gap    = 2.5;
+  const aisleW = 10;
+  const pW     = 210; // A4 width mm — keep standard width
+
+  // 2 left + aisle + 3 right
+  const busW   = 2*seatW + aisleW + 3*seatW + 5*gap;
+  const startX = (pW - busW) / 2;
+
+  // Column x positions
+  const col = [
+    startX,
+    startX + seatW + gap,
+    startX + 2*seatW + aisleW + 2*gap,
+    startX + 2*seatW + aisleW + seatW + 3*gap,
+    startX + 2*seatW + aisleW + 2*seatW + 4*gap
+  ];
+
+  // ── CALCULATE EXACT PAGE HEIGHT NEEDED ──
+  const headerH  = 36;  // header bar
+  const tripH    = 12;  // trip info line
+  const busTopY  = headerH + tripH;   // = 48
+  const topStripH= 5;
+  const driverH  = 10;
+  const driverGap= 2;
+  const rows13H  = 13 * (seatH + gap);
+  const backGap  = 5;
+  const backH    = seatH;
+  const padBus   = 6;   // padding inside bus shell at bottom
+  const busH     = topStripH + driverGap + driverH + driverGap + rows13H + backGap + backH + padBus;
+  const legH     = 14;  // legend
+  const footerH  = 20;  // footer bar + margin
+  const padTop   = 2;   // small top margin above bus
+
+  // Total page height = everything stacked
+  const pH = busTopY + padTop + busH + legH + footerH + 4;
+
+  // Create doc with custom page size
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [pW, pH]   // custom height — fits everything perfectly
+  });
 
   pdfHeader(doc, "Bus Seat Layout", logo);
 
-  // Departure info — centred below header
+  // Departure info
   doc.setFont("times","normal");
   doc.setFontSize(9);
   doc.setTextColor(60,60,60);
@@ -1185,52 +1228,20 @@ async function buildBusLayoutPDF(){
   doc.text(tripLine, pW/2, 43, {align:"center"});
   doc.setTextColor(0,0,0);
 
-  // ── BUS DIMENSIONS ──
-  // Seat size — wide enough for names, tall enough for two text lines
-  const seatW  = 28;
-  const seatH  = 15;
-  const gap    = 2.5;
-  const aisleW = 10;
-
-  // 2 left + aisle + 3 right
-  const busW = 2*seatW + aisleW + 3*seatW + 5*gap;
-  const startX = (pW - busW) / 2;  // centre horizontally
-
-  // Column x positions
-  const col = [
-    startX,
-    startX + seatW + gap,
-    // aisle gap here
-    startX + 2*seatW + aisleW + 2*gap,
-    startX + 2*seatW + aisleW + seatW + 3*gap,
-    startX + 2*seatW + aisleW + 2*seatW + 4*gap
-  ];
-
-  // Bus top — leave room for header + trip info
-  const busTopY = 48;
-
-  // Calculate total bus height
-  const driverH  = 10;
-  const rows13H  = 13 * (seatH + gap);
-  const backGap  = 5;
-  const backH    = seatH;
-  const padBot   = 6;
-  const busH     = driverH + gap + rows13H + backGap + backH + padBot;
-
-  // Bus outer shell (white background, dark border)
+  // ── BUS SHELL ──
+  const busShellY = busTopY + padTop;
   doc.setFillColor(255,255,255);
   doc.setDrawColor(50,50,50);
   doc.setLineWidth(1.0);
-  doc.roundedRect(startX - 5, busTopY, busW + 10, busH, 6, 6, 'FD');
+  doc.roundedRect(startX - 5, busShellY, busW + 10, busH, 6, 6, 'FD');
 
-  // Navy top strip (windscreen / front of bus)
+  // Navy top strip
   doc.setFillColor(11,41,77);
-  doc.roundedRect(startX - 5, busTopY, busW + 10, 5, 3, 3, 'F');
-  // Cover bottom corners of navy strip so it looks like a rectangle on top
-  doc.rect(startX - 5, busTopY + 2, busW + 10, 3, 'F');
+  doc.roundedRect(startX - 5, busShellY, busW + 10, topStripH, 3, 3, 'F');
+  doc.rect(startX - 5, busShellY + 2, busW + 10, topStripH - 2, 'F');
 
   // Driver area
-  const driverY = busTopY + 7;
+  const driverY = busShellY + topStripH + driverGap;
   doc.setFillColor(220,230,245);
   doc.setDrawColor(11,41,77);
   doc.setLineWidth(0.5);
@@ -1240,15 +1251,14 @@ async function buildBusLayoutPDF(){
   doc.setTextColor(11,41,77);
   doc.text("DRIVER", startX + busW/2, driverY + 6.5, {align:"center"});
 
-  // Draw 13 rows
-  let seatNum  = 1;
-  const rowsY  = driverY + driverH + gap;
+  // ── 13 ROWS OF SEATS ──
+  let seatNum = 1;
+  const rowsY = driverY + driverH + driverGap;
 
   for(let row = 0; row < 13; row++){
     const y = rowsY + row * (seatH + gap);
     drawSeatPDF(doc, seats, seatNum++, col[0], y, seatW, seatH);
     drawSeatPDF(doc, seats, seatNum++, col[1], y, seatW, seatH);
-    // aisle dot
     doc.setFillColor(200,200,200);
     doc.circle(startX + 2*seatW + aisleW/2 + gap, y + seatH/2, 0.7, 'F');
     drawSeatPDF(doc, seats, seatNum++, col[2], y, seatW, seatH);
@@ -1256,19 +1266,20 @@ async function buildBusLayoutPDF(){
     drawSeatPDF(doc, seats, seatNum++, col[4], y, seatW, seatH);
   }
 
-  // Back row — 7 seats spanning full bus interior width
-  const backY      = rowsY + 13*(seatH + gap) + backGap;
-  const backSeatW  = (busW - 6*gap) / 7;
+  // ── BACK ROW — 7 seats ──
+  const backY     = rowsY + 13*(seatH + gap) + backGap;
+  const backSeatW = (busW - 6*gap) / 7;
   doc.setFont("times","italic");
   doc.setFontSize(6);
   doc.setTextColor(120,120,120);
   doc.text("BACK ROW", startX + busW/2, backY - 1.5, {align:"center"});
   for(let i = 0; i < 7; i++){
-    drawSeatPDF(doc, seats, seatNum++, startX + i*(backSeatW + gap), backY, backSeatW, seatH);
+    drawSeatPDF(doc, seats, seatNum++,
+      startX + i*(backSeatW + gap), backY, backSeatW, seatH);
   }
 
-  // Legend — below bus
-  const legY = busTopY + busH + 6;
+  // ── LEGEND ──
+  const legY = busShellY + busH + 5;
   doc.setFont("times","normal");
   doc.setFontSize(8);
   doc.setTextColor(0,0,0);
