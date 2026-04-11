@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(session({secret:"polycoach-2025",resave:false,saveUninitialized:true,cookie:{maxAge:86400000}}));
+app.get('/', (req, res) => res.redirect('/Home-Page.html'));
 app.use(express.static(path.join(__dirname,"public")));
 app.use("/uploads",express.static(path.join(__dirname,"uploads")));
 
