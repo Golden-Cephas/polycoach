@@ -158,6 +158,9 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, "public")));
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "Home-Page.html"));
+});
 /* ════════════════════════════════════════
    RATE LIMITING (login protection)
 ════════════════════════════════════════ */
