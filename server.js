@@ -1,14 +1,12 @@
 /*
- * PolyCoach — Production Server v2.1
- * Fixed: Cloudinary errors no longer crash registration
- * Fixed: Graceful fallback if env vars missing
+ * PolyCoach — Production Server v3.0
+ * Uploads: stored as base64 in MongoDB (no Cloudinary needed)
+ * All files viewable directly from the admin dashboard
  *
  * ENVIRONMENT VARIABLES (set in Render dashboard):
- *   MONGODB_URI        — MongoDB Atlas connection string
- *   CLOUDINARY_CLOUD   — Your Cloudinary cloud name
- *   CLOUDINARY_KEY     — Your Cloudinary API key
- *   CLOUDINARY_SECRET  — Your Cloudinary API secret
- *   SESSION_SECRET     — Any long random string
+ *   MONGODB_URI      — MongoDB Atlas connection string (REQUIRED)
+ *   SESSION_SECRET   — Any long random string (REQUIRED)
+ *   PORT             — Set automatically by Render, leave blank
  */
 
 const express    = require("express");
@@ -23,63 +21,29 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 /* ════════════════════════════════════════
-   CLOUDINARY — only init if credentials exist
-════════════════════════════════════════ */
-let cloudinary = null;
-let CloudinaryStorage = null;
-const CLOUDINARY_CONFIGURED =
-  process.env.CLOUDINARY_CLOUD &&
-  process.env.CLOUDINARY_KEY &&
-  process.env.CLOUDINARY_SECRET;
-
-if (CLOUDINARY_CONFIGURED) {
-  cloudinary = require("cloudinary").v2;
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD,
-    api_key:    process.env.CLOUDINARY_KEY,
-    api_secret: process.env.CLOUDINARY_SECRET,
-  });
-  CloudinaryStorage = require("multer-storage-cloudinary").CloudinaryStorage;
-  console.log("✅ Cloudinary configured");
-} else {
-  console.log("⚠️  Cloudinary not configured — uploads stored in memory only");
-}
-
-/* ════════════════════════════════════════
-   MULTER — uses Cloudinary if available,
-            otherwise memory (file is lost
-            but registration still works)
-════════════════════════════════════════ */
-function makeUploader(folder) {
-  if (CLOUDINARY_CONFIGURED) {
-    const storage = new CloudinaryStorage({
-      cloudinary,
-      params: { folder, allowed_formats: ["jpg","jpeg","png","webp"] }
-    });
-    return multer({ storage });
-  }
-  // Fallback: memory storage — registration works, file just not saved
-  return multer({ storage: multer.memoryStorage() });
-}
-
-const uploadID      = makeUploader("polycoach/studentIDs");
-const uploadPayment = makeUploader("polycoach/payments");
-
-/* ════════════════════════════════════════
    MONGODB
 ════════════════════════════════════════ */
 if (!process.env.MONGODB_URI) {
-  console.error("❌ MONGODB_URI environment variable is not set!");
-  console.error("   Go to Render dashboard → Your service → Environment → Add MONGODB_URI");
-  process.exit(1); // Stop server so you see the error clearly in Render logs
+  console.error("❌ MONGODB_URI not set! Go to Render → Environment and add it.");
+  process.exit(1);
 }
-
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => {
-    console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1);
-  });
+  .catch(err => { console.error("❌ MongoDB failed:", err.message); process.exit(1); });
+
+/* ════════════════════════════════════════
+   MULTER — memory storage only
+   Files stored as base64 in MongoDB
+   No external service needed
+════════════════════════════════════════ */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"), false);
+  }
+});
 
 /* ════════════════════════════════════════
    SCHEMAS
@@ -89,8 +53,9 @@ const userSchema = new mongoose.Schema({
   phone:     { type: String, required: true, unique: true },
   regNumber: { type: String, required: true, unique: true },
   password:  { type: String, required: true },
+  // Student ID stored as base64 data URL
   studentID: { type: String, default: null },
-  createdAt: { type: Date,   default: Date.now }
+  createdAt: { type: Date, default: Date.now }
 });
 const User = mongoose.model("User", userSchema);
 
@@ -115,7 +80,8 @@ const bookingSchema = new mongoose.Schema({
   passengerName: String,
   destination:   String,
   phone:         String,
-  paymentProof:  String,
+  // Payment proof stored as base64 data URL
+  paymentProof:  { type: String, default: null },
   status:        { type: String, enum: ["pending","approved","rejected"], default: "pending" },
   createdAt:     { type: Date, default: Date.now }
 });
@@ -150,24 +116,18 @@ const DEFAULT_PASSWORDS = {
    SEED
 ════════════════════════════════════════ */
 async function seedDatabase() {
-  // Seats
-  const seatCount = await Seat.countDocuments();
-  if (seatCount === 0) {
+  if (await Seat.countDocuments() === 0) {
     const seats = [];
     for (let i = 1; i <= 72; i++) seats.push({ number: i });
     await Seat.insertMany(seats);
     console.log("✅ 72 seats seeded");
   }
-  // Admins
   for (const a of DEFAULT_ADMINS) {
-    const exists = await Admin.findOne({ phone: a.phone });
-    if (!exists) {
-      const hashed = await bcrypt.hash(a.password, 10);
-      await Admin.create({ fullName: a.fullName, phone: a.phone, password: hashed });
+    if (!await Admin.findOne({ phone: a.phone })) {
+      await Admin.create({ fullName: a.fullName, phone: a.phone, password: await bcrypt.hash(a.password, 10) });
       console.log(`✅ Admin seeded: ${a.fullName}`);
     }
   }
-  // Settings
   if (await Settings.countDocuments() === 0) {
     await Settings.create({});
     console.log("✅ Settings seeded");
@@ -177,10 +137,10 @@ async function seedDatabase() {
 /* ════════════════════════════════════════
    MIDDLEWARE
 ════════════════════════════════════════ */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(session({
-  secret: process.env.SESSION_SECRET || "polycoach-fallback-secret",
+  secret: process.env.SESSION_SECRET || "polycoach-secret",
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
@@ -217,16 +177,23 @@ function requireAdmin(req, res, next) {
 }
 
 /* ════════════════════════════════════════
-   CLOUDINARY TEST ROUTE (admin only)
-   Visit /api/cloudinary-status to check
+   HELPER — convert multer buffer to base64 data URL
 ════════════════════════════════════════ */
-app.get("/api/cloudinary-status", (req, res) => {
+function fileToDataURL(file) {
+  if (!file || !file.buffer) return null;
+  const base64 = file.buffer.toString("base64");
+  return `data:${file.mimetype};base64,${base64}`;
+}
+
+/* ════════════════════════════════════════
+   STATUS CHECK
+════════════════════════════════════════ */
+app.get("/api/status", (req, res) => {
   res.json({
-    configured: CLOUDINARY_CONFIGURED,
-    cloud: process.env.CLOUDINARY_CLOUD || "NOT SET",
-    keySet: !!process.env.CLOUDINARY_KEY,
-    secretSet: !!process.env.CLOUDINARY_SECRET,
-    mongoUri: !!process.env.MONGODB_URI
+    server: "running",
+    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    uploadMethod: "base64-mongodb",
+    sessionSecret: !!process.env.SESSION_SECRET
   });
 });
 
@@ -245,13 +212,9 @@ app.get("/api/settings", async (req, res) => {
 
 // ── REGISTER ──
 app.post("/api/register", (req, res, next) => {
-  // Run multer but catch its errors so registration never crashes
-  uploadID.single("studentID")(req, res, (err) => {
-    if (err) {
-      console.error("Upload middleware error (non-fatal):", err.message);
-      // Continue without the file — registration still works
-    }
-    next();
+  upload.single("studentID")(req, res, (err) => {
+    if (err) console.error("Register upload error (non-fatal):", err.message);
+    next(); // always continue even if file fails
   });
 }, async (req, res) => {
   const { name, phone, regNumber, password } = req.body;
@@ -262,19 +225,11 @@ app.post("/api/register", (req, res, next) => {
     if (exists)
       return res.json({ success: false, message: "Phone or Registration Number already registered." });
     const hashed = await bcrypt.hash(password, 10);
-    // Get Cloudinary URL if upload succeeded, otherwise null
-    let studentIDUrl = null;
-    if (req.file) {
-      studentIDUrl = req.file.path || req.file.secure_url || null;
-    }
-    await User.create({
-      fullName: name, phone, regNumber,
-      password: hashed,
-      studentID: studentIDUrl
-    });
+    const studentID = fileToDataURL(req.file); // base64 or null
+    await User.create({ fullName: name, phone, regNumber, password: hashed, studentID });
     res.json({ success: true });
   } catch (err) {
-    console.error("Registration error:", err);
+    console.error("Registration error:", err.message);
     res.json({ success: false, message: "Registration failed. Please try again." });
   }
 });
@@ -294,7 +249,7 @@ app.post("/api/login", loginRateLimit, async (req, res) => {
     req.session.user = { fullName: user.fullName, phone: user.phone, regNumber: user.regNumber, role: "user" };
     res.json({ success: true, user: req.session.user });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("Login error:", err.message);
     res.status(500).json({ success: false, message: "Server error." });
   }
 });
@@ -311,20 +266,34 @@ app.get("/api/seats", async (req, res) => {
   catch { res.json([]); }
 });
 
-// ── UPLOAD PAYMENT ──
+// ── UPLOAD PAYMENT PROOF ──
 app.post("/api/upload-payment", requireUser, (req, res, next) => {
-  uploadPayment.single("paymentProof")(req, res, (err) => {
+  upload.single("paymentProof")(req, res, (err) => {
     if (err) {
       console.error("Payment upload error:", err.message);
-      return res.json({ success: false, message: "Upload failed. Check your internet and try again." });
+      return res.json({ success: false, message: err.message || "Upload failed." });
     }
     next();
   });
 }, async (req, res) => {
-  if (!req.file) return res.json({ success: false, message: "No file received." });
-  const url = req.file.path || req.file.secure_url || null;
-  req.session.paymentProof = url;
-  res.json({ success: true, url });
+  if (!req.file)
+    return res.json({ success: false, message: "No file received. Please select an image." });
+  try {
+    const dataURL = fileToDataURL(req.file);
+    if (!dataURL)
+      return res.json({ success: false, message: "Could not process image. Try a smaller file." });
+    req.session.paymentProof = dataURL; // store in session until seat is booked
+    req.session.save(err => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.json({ success: false, message: "Session error. Please try again." });
+      }
+      res.json({ success: true });
+    });
+  } catch (err) {
+    console.error("Payment proof error:", err.message);
+    res.json({ success: false, message: "Upload failed. Please try again." });
+  }
 });
 
 // ── BOOK SEAT ──
@@ -340,8 +309,10 @@ app.post("/api/book-seat", requireUser, async (req, res) => {
     if (!seat) return res.status(404).json({ success: false, message: "Seat not found." });
     if (seat.status !== "available")
       return res.status(409).json({ success: false, message: "Seat already taken. Please choose another." });
-    seat.status = "pending"; seat.passengerName = passengerName;
-    seat.destination = destination || ""; seat.phone = req.session.user.phone;
+    seat.status = "pending";
+    seat.passengerName = passengerName;
+    seat.destination = destination || "";
+    seat.phone = req.session.user.phone;
     await seat.save();
     await Booking.create({
       seatNumber: seatNum, passengerName,
@@ -353,7 +324,7 @@ app.post("/api/book-seat", requireUser, async (req, res) => {
     req.session.paymentProof = null;
     res.json({ success: true });
   } catch (err) {
-    console.error("Booking error:", err);
+    console.error("Booking error:", err.message);
     res.status(500).json({ success: false, message: "Booking failed." });
   }
 });
@@ -361,9 +332,25 @@ app.post("/api/book-seat", requireUser, async (req, res) => {
 /* ════════════════════════════════════════
    ADMIN ROUTES
 ════════════════════════════════════════ */
+// Users
 app.get("/api/admin/users", requireAdmin, async (req, res) => {
-  res.json(await User.find().select("-password").sort({ createdAt: -1 }));
+  // Don't send base64 studentID in list (too large) — send flag instead
+  const users = await User.find().select("-password").sort({ createdAt: -1 }).lean();
+  res.json(users.map(u => ({
+    ...u,
+    hasStudentID: !!u.studentID,
+    studentID: u.studentID ? "has_file" : null // don't send full base64 in list
+  })));
 });
+
+// Get student ID image for a specific user (admin only)
+app.get("/api/admin/users/:id/studentid", requireAdmin, async (req, res) => {
+  const user = await User.findById(req.params.id).select("studentID fullName");
+  if (!user || !user.studentID)
+    return res.status(404).json({ success: false, message: "No student ID found." });
+  res.json({ success: true, image: user.studentID, name: user.fullName });
+});
+
 app.post("/api/admin/users", requireAdmin, async (req, res) => {
   const { fullName, phone, regNumber, password } = req.body;
   try {
@@ -373,14 +360,31 @@ app.post("/api/admin/users", requireAdmin, async (req, res) => {
     res.json({ success: true });
   } catch { res.json({ success: false, message: "Error." }); }
 });
+
 app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
   await User.findByIdAndDelete(req.params.id);
   res.json({ success: true });
 });
 
+// Bookings
 app.get("/api/admin/bookings", requireAdmin, async (req, res) => {
-  res.json(await Booking.find().sort({ createdAt: -1 }));
+  // Don't send base64 in list — send flag instead
+  const bookings = await Booking.find().sort({ createdAt: -1 }).lean();
+  res.json(bookings.map(b => ({
+    ...b,
+    hasPaymentProof: !!b.paymentProof,
+    paymentProof: b.paymentProof ? "has_file" : null
+  })));
 });
+
+// Get payment proof image for a specific booking (admin only)
+app.get("/api/admin/bookings/:id/proof", requireAdmin, async (req, res) => {
+  const booking = await Booking.findById(req.params.id).select("paymentProof passengerName");
+  if (!booking || !booking.paymentProof)
+    return res.status(404).json({ success: false, message: "No payment proof found." });
+  res.json({ success: true, image: booking.paymentProof, name: booking.passengerName });
+});
+
 app.post("/api/admin/approve/:id", requireAdmin, async (req, res) => {
   const b = await Booking.findById(req.params.id);
   if (!b) return res.status(404).json({ success: false });
@@ -415,6 +419,7 @@ app.delete("/api/admin/bookings/:id", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
+// Seat edit
 app.post("/api/admin/seats/:num", requireAdmin, async (req, res) => {
   const num = Number(req.params.num);
   const { status, passengerName, destination } = req.body;
@@ -427,12 +432,14 @@ app.post("/api/admin/seats/:num", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
+// Reset seats
 app.post("/api/admin/reset-seats", requireAdmin, async (req, res) => {
   await Seat.updateMany({}, { status: "available", passengerName: null, destination: "", phone: "" });
   await Booking.deleteMany({});
   res.json({ success: true });
 });
 
+// Settings
 app.post("/api/admin/settings", requireAdmin, async (req, res) => {
   try {
     let s = await Settings.findOne();
@@ -443,6 +450,7 @@ app.post("/api/admin/settings", requireAdmin, async (req, res) => {
   } catch { res.json({ success: false }); }
 });
 
+// Admin password change
 app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword || newPassword.length < 4)
@@ -456,6 +464,7 @@ app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
   res.json({ success: true, message: "Password changed successfully." });
 });
 
+// Reset admin to default password
 app.post("/api/admin/reset-admin-password", requireAdmin, async (req, res) => {
   const { targetPhone } = req.body;
   if (!DEFAULT_PASSWORDS[targetPhone])
@@ -472,5 +481,5 @@ app.post("/api/admin/reset-admin-password", requireAdmin, async (req, res) => {
 ════════════════════════════════════════ */
 mongoose.connection.once("open", async () => {
   await seedDatabase();
-  app.listen(PORT, () => console.log(`✅ PolyCoach running on http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`✅ PolyCoach running on port ${PORT}`));
 });

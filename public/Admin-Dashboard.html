@@ -367,7 +367,8 @@ tr:hover td{background:#fafafa;}
 <div class="modal-overlay" id="proofModal">
   <div class="modal-box">
     <h3>Payment Proof</h3>
-    <img class="proof-img" id="proofImg" alt="Payment proof">
+    <p id="proofLoading" style="display:none;color:#888;text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Loading image...</p>
+    <img class="proof-img" id="proofImg" alt="Payment proof" style="max-width:100%;border-radius:8px;margin-top:10px;display:none;">
     <button class="btn-cancel" style="margin-top:16px;" onclick="closeModal('proofModal')">Close</button>
   </div>
 </div>
@@ -481,7 +482,7 @@ async function loadUsers(){
       const tr=document.createElement("tr");
       tr.id="user-row-"+uid;
       tr.innerHTML=`<td><strong>${u.fullName}</strong></td><td>${u.phone}</td><td>${u.regNumber}</td>
-      <td>${u.studentID?`<a href="${u.studentID}" target="_blank" style="color:var(--accent);font-weight:700;">View ID</a>`:"None"}</td>
+      <td>${u.hasStudentID?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewStudentID('${uid}','${u.fullName}')"><i class="fa-solid fa-id-card"></i> View ID</button>`:"None"}</td>
       <td style="font-size:0.78rem;color:#888;">${u.createdAt?new Date(u.createdAt).toLocaleDateString():"-"}</td>
       <td><button class="btn btn-delete" id="delbtn-${uid}" onclick="deleteUser('${uid}','${u.fullName}')"><i class="fa-solid fa-trash"></i></button></td>`;
       tbody.appendChild(tr);
@@ -554,7 +555,7 @@ async function loadBookings(){
     tr.innerHTML=`<td><strong>${b.passengerName}</strong><br><span style="font-size:0.75rem;color:#888;">${b.phone||""}</span></td>
     <td><strong>Seat ${b.seatNumber}</strong></td>
     <td>${b.destination||"—"}</td>
-    <td>${b.paymentProof?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewProof('${b.paymentProof}')"><i class="fa-solid fa-image"></i> View</button>`:"None"}</td>
+    <td>${b.hasPaymentProof?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewProof('${bid}')"><i class="fa-solid fa-image"></i> View</button>`:"None"}</td>
     <td><span class="${badgeClass}">${b.status.toUpperCase()}</span></td>
     <td style="display:flex;gap:5px;flex-wrap:wrap;">
       ${b.status==="pending"?`<button class="btn btn-approve" onclick="approveBooking('${b._id||b.id}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-reject" onclick="rejectBooking('${b._id||b.id}')"><i class="fa-solid fa-xmark"></i></button>`:""}
@@ -593,16 +594,47 @@ async function deleteBooking(id){
   }
 }
 
-function viewProof(url){
+async function viewProof(bookingId){
   const img=document.getElementById("proofImg");
-  // url is either a full Cloudinary URL or a local filename (legacy)
-  if(url && (url.startsWith("http://") || url.startsWith("https://"))){
-    img.src=url; // Cloudinary full URL
-  } else {
-    img.src="/uploads/payments/"+url; // legacy local path fallback
-  }
-  img.style.display="block";
+  img.style.display="none";
+  img.src="";
   document.getElementById("proofModal").style.display="flex";
+  // Show loading
+  const box=document.querySelector("#proofModal .modal-box");
+  const loading=document.getElementById("proofLoading");
+  if(loading) loading.style.display="block";
+  try{
+    const r=await fetch("/api/admin/bookings/"+bookingId+"/proof");
+    const d=await r.json();
+    if(d.success){
+      img.src=d.image;
+      img.style.display="block";
+    } else {
+      alert("No payment proof found for this booking.");
+      document.getElementById("proofModal").style.display="none";
+    }
+  }catch{
+    alert("Could not load image. Please try again.");
+    document.getElementById("proofModal").style.display="none";
+  }
+  if(loading) loading.style.display="none";
+}
+
+async function viewStudentID(userId, name){
+  try{
+    const r=await fetch("/api/admin/users/"+userId+"/studentid");
+    const d=await r.json();
+    if(d.success){
+      const img=document.getElementById("proofImg");
+      img.src=d.image;
+      img.style.display="block";
+      document.getElementById("proofModal").style.display="flex";
+    } else {
+      alert("No student ID found for "+name);
+    }
+  }catch{
+    alert("Could not load student ID.");
+  }
 }
 
 function openAddBookingModal(){document.getElementById("addBookingModal").style.display="flex";}
