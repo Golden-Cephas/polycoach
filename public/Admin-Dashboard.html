@@ -998,372 +998,412 @@ async function downloadBusLayoutPDF() {
 
 /* ── PDF HELPERS ── */
 
-// ═══════════════════════════════════════
-// SHARED: draw header with logo on every page
-// ═══════════════════════════════════════
-function pdfHeader(doc, docTitle){
+/* ════════════════════════════════════════
+   SHARED HEADER — logo image + title
+   Uses Logo2.PNG from /Images/
+════════════════════════════════════════ */
+function pdfHeader(doc, docTitle, logoDataURL){
   const pW = doc.internal.pageSize.getWidth();
-  // Navy header bar
+  // Navy bar
   doc.setFillColor(11,41,77);
-  doc.rect(0, 0, pW, 34, 'F');
-  // Bus icon (simple SVG-style drawn with jsPDF shapes) — white
-  // Draw a simplified bus silhouette using rectangles/ellipses
-  const bx=10, by=6; // bus x,y origin
-  doc.setFillColor(255,255,255);
-  // Bus body
-  doc.roundedRect(bx, by+2, 18, 10, 1.5, 1.5, 'F');
-  // Bus windshield
-  doc.setFillColor(11,41,77);
-  doc.rect(bx+13, by+3.5, 4, 5, 'F');
-  doc.setFillColor(255,255,255);
-  // Wheels
-  doc.circle(bx+4, by+13, 1.8, 'F');
-  doc.circle(bx+14, by+13, 1.8, 'F');
-  // Speed lines
-  doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
-  doc.line(bx-1, by+4, bx+2, by+4);
-  doc.line(bx-2, by+7, bx+1, by+7);
-  doc.line(bx-1, by+10, bx+2, by+10);
-  // PolyCoach text
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(16);
+  doc.rect(0, 0, pW, 36, 'F');
+
+  // Logo — embed actual image if available
+  if(logoDataURL){
+    try{
+      doc.addImage(logoDataURL, 'PNG', 10, 4, 28, 28);
+    }catch(e){
+      // If image fails silently skip — no broken placeholder
+    }
+    // Organisation name next to logo
+    doc.setFont("times","bold");
+    doc.setFontSize(17);
+    doc.setTextColor(255,255,255);
+    doc.text("PolyCoach", 42, 16);
+    doc.setFont("times","normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(180,210,255);
+    doc.text("Student Bus Booking System  —  MUBAS", 42, 23);
+  } else {
+    // No logo — just text, centred vertically in bar
+    doc.setFont("times","bold");
+    doc.setFontSize(17);
+    doc.setTextColor(255,255,255);
+    doc.text("PolyCoach", 14, 16);
+    doc.setFont("times","normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(180,210,255);
+    doc.text("Student Bus Booking System  —  MUBAS", 14, 23);
+  }
+
+  // Document title — right aligned
+  doc.setFont("times","bold");
+  doc.setFontSize(13);
   doc.setTextColor(255,255,255);
-  doc.text("PolyCoach", bx+22, by+9);
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(8);
-  doc.setTextColor(180,210,255);
-  doc.text("Student Bus Booking System  —  MUBAS", bx+22, by+15);
-  // Document title on right
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(12);
-  doc.setTextColor(255,255,255);
-  doc.text(docTitle, pW-10, by+10, {align:"right"});
+  doc.text(docTitle, pW - 12, 20, {align:"right"});
+
   // Accent blue line
   doc.setDrawColor(0,153,255);
   doc.setLineWidth(1.5);
-  doc.line(0, 34, pW, 34);
+  doc.line(0, 36, pW, 36);
+
   // Reset
   doc.setTextColor(0,0,0);
   doc.setDrawColor(0,0,0);
   doc.setLineWidth(0.3);
 }
 
-// ═══════════════════════════════════════
-// SHARED: draw footer on every page
-// ═══════════════════════════════════════
-function pdfFooter(doc){
-  const pW = doc.internal.pageSize.getWidth();
-  const pH = doc.internal.pageSize.getHeight();
+/* ════════════════════════════════════════
+   SHARED FOOTER
+════════════════════════════════════════ */
+function pdfFooter(doc, printedDate){
+  const pW    = doc.internal.pageSize.getWidth();
+  const pH    = doc.internal.pageSize.getHeight();
   const pages = doc.internal.getNumberOfPages();
-  for(let i=1;i<=pages;i++){
+  for(let i = 1; i <= pages; i++){
     doc.setPage(i);
     doc.setDrawColor(0,153,255);
     doc.setLineWidth(0.8);
-    doc.line(0, pH-16, pW, pH-16);
+    doc.line(0, pH-18, pW, pH-18);
     doc.setFillColor(11,41,77);
-    doc.rect(0, pH-15, pW, 15, 'F');
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(7.5);
+    doc.rect(0, pH-17, pW, 17, 'F');
+    doc.setFont("times","normal");
+    doc.setFontSize(8);
     doc.setTextColor(255,255,255);
-    doc.text("polycoachsupport@gmail.com  |  +265 881 730 203  |  MUBAS, Blantyre, Malawi", 10, pH-6);
-    doc.text("Page "+i+" of "+pages, pW-10, pH-6, {align:"right"});
+    doc.text(
+      "polycoachsupport@gmail.com  |  +265 881 730 203  |  MUBAS, Blantyre, Malawi",
+      14, pH - 9
+    );
+    doc.text("Printed: " + printedDate, 14, pH - 4);
+    doc.text("Page " + i + " of " + pages, pW - 12, pH - 6, {align:"right"});
     doc.setTextColor(0,0,0);
   }
 }
 
-// ═══════════════════════════════════════
-// DOWNLOAD REGISTRATION LIST PDF
-// ═══════════════════════════════════════
-async function downloadUsersPDF(){
-  const btn = event.currentTarget;
-  btn.disabled=true;
-  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
-  try{
-    const r = await fetch("/api/admin/users");
-    const users = await r.json();
-    const {jsPDF} = window.jspdf;
-    // Portrait A4 — same length feel as shown
-    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-    const pW = doc.internal.pageSize.getWidth();
-
-    pdfHeader(doc, "Registration List");
-
-    // Date + count line
-    doc.setFontSize(8.5);
-    doc.setTextColor(90,90,90);
-    doc.setFont("helvetica","italic");
-    const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
-    doc.text("Printed: "+dateStr, 14, 41);
-    doc.text("Total Students: "+users.length, pW-14, 41, {align:"right"});
-    doc.setFont("helvetica","normal");
-    doc.setTextColor(0,0,0);
-
-    // Table
-    const rows = users.map((u,i) => [
-      String(i+1),
-      u.fullName || "-",
-      u.regNumber || "-",
-      u.phone || "-"
-    ]);
-
-    doc.autoTable({
-      startY: 45,
-      head: [["#", "Full Name", "Registration Number", "Phone"]],
-      body: rows,
-      styles:{
-        font:"helvetica",
-        fontSize:10,
-        cellPadding:{top:4,bottom:4,left:4,right:4},
-        textColor:[0,0,0],
-        lineColor:[210,220,230],
-        lineWidth:0.3,
-        valign:"middle"
-      },
-      headStyles:{
-        fillColor:[11,41,77],
-        textColor:[255,255,255],
-        fontStyle:"bold",
-        fontSize:9.5,
-        cellPadding:{top:5,bottom:5,left:4,right:4}
-      },
-      alternateRowStyles:{ fillColor:[240,246,255] },
-      columnStyles:{
-        0:{cellWidth:12, halign:"center", fontStyle:"bold"},
-        1:{cellWidth:72},
-        2:{cellWidth:60},
-        3:{cellWidth:38}
-      },
-      margin:{left:14, right:14, top:46, bottom:20},
-      didDrawPage: function(){
-        pdfHeader(doc, "Registration List");
-      }
-    });
-
-    pdfFooter(doc);
-    doc.save("PolyCoach-Registration-List-"+new Date().toISOString().slice(0,10)+".pdf");
-  }catch(err){
-    alert("Could not generate PDF. Please try again.");
-    console.error(err);
-  }
-  btn.disabled=false;
-  btn.innerHTML='<i class="fa-solid fa-file-pdf"></i> Download List';
+/* ════════════════════════════════════════
+   LOAD Logo2.PNG as base64 data URL
+════════════════════════════════════════ */
+async function loadLogo2(){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = function(){
+      try{
+        const canvas = document.createElement("canvas");
+        canvas.width  = img.naturalWidth  || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      }catch(e){ resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = "/Images/Logo2.PNG?" + Date.now(); // cache-bust
+  });
 }
 
-// ═══════════════════════════════════════
-// DOWNLOAD BUS LAYOUT PDF
-// ═══════════════════════════════════════
-async function downloadBusPDF(){
-  const btn = event.currentTarget;
-  btn.disabled=true;
-  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
-  try{
-    const r = await fetch("/api/seats");
-    const seats = await r.json();
-    const settings = await (await fetch("/api/settings")).json();
-    const {jsPDF} = window.jspdf;
-
-    // Portrait A4 — same page feel as registration list
-    const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
-    const pW = doc.internal.pageSize.getWidth(); // 210
-    const pH = doc.internal.pageSize.getHeight(); // 297
-
-    pdfHeader(doc, "Bus Seat Layout");
-
-    // Trip info
-    doc.setFontSize(8.5);
-    doc.setTextColor(80,80,80);
-    doc.setFont("helvetica","normal");
-    const tripLine = "Departure: "+(settings.departureDate||"")+" at "+(settings.departureTime||"")
-      +" | Venue: "+(settings.departureVenue||"")+" | Booking Fee: "+(settings.bookingFee||"");
-    doc.text(tripLine, pW/2, 40, {align:"center"});
-
-    // Printed date
-    const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
-    doc.setFontSize(8);
-    doc.setTextColor(100,100,100);
-    doc.setFont("helvetica","italic");
-    doc.text("Printed: "+dateStr, 14, 45);
-
-    // Stats
-    const nBooked  = seats.filter(s=>s.status==="booked"||s.status==="taken").length;
-    const nPending = seats.filter(s=>s.status==="pending").length;
-    const nAvail   = seats.filter(s=>s.status==="available").length;
-    doc.text("Booked: "+nBooked+" | Pending: "+nPending+" | Available: "+nAvail+" | Total: 72", pW-14, 45, {align:"right"});
-
-    // Legend
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(8);
-    doc.setTextColor(0,0,0);
-    const legY = 50;
-    // Booked
-    doc.setFillColor(255,180,180); doc.setDrawColor(180,60,60);
-    doc.rect(14, legY, 6, 4, 'FD');
-    doc.text("Booked", 22, legY+3.2);
-    // Available
-    doc.setFillColor(190,235,190); doc.setDrawColor(60,160,60);
-    doc.rect(50, legY, 6, 4, 'FD');
-    doc.text("Available", 58, legY+3.2);
-    // Pending
-    doc.setFillColor(255,235,150); doc.setDrawColor(180,140,30);
-    doc.rect(92, legY, 6, 4, 'FD');
-    doc.text("Pending", 100, legY+3.2);
-
-    // ═══════════════════════
-    // BUS DRAWING
-    // ═══════════════════════
-    // Seat dimensions — elongated rectangles, wide enough for names
-    const seatW = 30;   // wide enough for a name
-    const seatH = 16;   // tall enough for seat number + name on 2 lines
-    const gap   = 3;    // gap between seats
-    const aisleW = 12;  // aisle width
-
-    // 2 cols left + aisle + 3 cols right
-    const busW = 2*seatW + aisleW + 3*seatW + 5*gap;
-
-    // Center the bus horizontally
-    const busStartX = (pW - busW) / 2;
-
-    // Column X positions
-    const c0 = busStartX;
-    const c1 = busStartX + seatW + gap;
-    // aisle
-    const c2 = busStartX + 2*seatW + aisleW + 2*gap;
-    const c3 = c2 + seatW + gap;
-    const c4 = c3 + seatW + gap;
-
-    // Bus exterior — rounded rect outline
-    const busTopY = 56;
-    const rows13H = 13 * (seatH + gap);
-    const backRowH = seatH + 5;
-    const busBodyH = 14 + rows13H + backRowH + 8; // driver + seats + back + padding
-    const busH = busBodyH;
-
-    // Draw bus outer shell
-    doc.setDrawColor(60,60,60);
-    doc.setLineWidth(1.2);
-    doc.setFillColor(248,248,248);
-    doc.roundedRect(busStartX-6, busTopY, busW+12, busH, 8, 8, 'FD');
-
-    // Draw bus windows strip at top (decorative)
-    doc.setFillColor(11,41,77);
-    doc.roundedRect(busStartX-6, busTopY, busW+12, 5, 4, 4, 'F');
-
-    // Driver area
-    const driverY = busTopY + 7;
-    doc.setFillColor(220,230,245);
-    doc.setDrawColor(11,41,77);
-    doc.setLineWidth(0.5);
-    doc.rect(busStartX, driverY, busW, 10, 'FD');
-    // Steering wheel icon
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(7);
-    doc.setTextColor(11,41,77);
-    doc.text("⊕  DRIVER", busStartX + busW/2, driverY+6.5, {align:"center"});
-
-    // Aisle label
-    const aisleX = busStartX + 2*seatW + 2*gap;
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(6);
-    doc.setTextColor(150,150,150);
-
-    // Draw 13 rows of seats
-    let seatNum = 1;
-    const seatsStartY = driverY + 13;
-
-    for(let row=0; row<13; row++){
-      const y = seatsStartY + row*(seatH+gap);
-      // Left 2
-      drawSeatPDF(doc, seats, seatNum++, c0, y, seatW, seatH);
-      drawSeatPDF(doc, seats, seatNum++, c1, y, seatW, seatH);
-      // Aisle dot
-      doc.setFillColor(230,230,230);
-      doc.circle(aisleX + aisleW/2, y + seatH/2, 0.8, 'F');
-      // Right 3
-      drawSeatPDF(doc, seats, seatNum++, c2, y, seatW, seatH);
-      drawSeatPDF(doc, seats, seatNum++, c3, y, seatW, seatH);
-      drawSeatPDF(doc, seats, seatNum++, c4, y, seatW, seatH);
-    }
-
-    // Back row — 7 seats spanning full bus width
-    const backY = seatsStartY + 13*(seatH+gap) + 4;
-    // Label
-    doc.setFontSize(6);
-    doc.setTextColor(130,130,130);
-    doc.setFont("helvetica","italic");
-    doc.text("BACK ROW", busStartX + busW/2, backY-1.5, {align:"center"});
-    const backSeatW = (busW - 6*gap) / 7;
-    for(let i=0; i<7; i++){
-      drawSeatPDF(doc, seats, seatNum++, busStartX + i*(backSeatW+gap), backY, backSeatW, seatH);
-    }
-
-    pdfFooter(doc);
-    doc.save("PolyCoach-Bus-Layout-"+new Date().toISOString().slice(0,10)+".pdf");
-  }catch(err){
-    alert("Could not generate Bus Layout PDF.");
-    console.error(err);
-  }
-  btn.disabled=false;
-  btn.innerHTML='<i class="fa-solid fa-file-pdf"></i> Download Bus Layout';
-}
-
-// ═══════════════════════════════════════
-// Draw individual seat on PDF
-// Name on top line, surname on bottom line
-// ═══════════════════════════════════════
+/* ════════════════════════════════════════
+   DRAW ONE SEAT ON THE BUS PDF
+   — name (first line) / SURNAME (second line)
+   — Times New Roman throughout
+════════════════════════════════════════ */
 function drawSeatPDF(doc, seats, num, x, y, w, h){
-  const seat = seats.find(s=>Number(s.number)===num) || {number:num, status:"available"};
-  const status = seat.status==="taken" ? "booked" : (seat.status||"available");
+  const seat   = seats.find(s => Number(s.number) === num) || {number:num, status:"available"};
+  const status = (seat.status === "taken") ? "booked" : (seat.status || "available");
 
-  // Background colour by status
-  if(status==="booked"){
-    doc.setFillColor(255,180,180);
-    doc.setDrawColor(180,60,60);
-  } else if(status==="pending"){
-    doc.setFillColor(255,235,150);
-    doc.setDrawColor(180,140,30);
+  if(status === "booked"){
+    doc.setFillColor(255,180,180); doc.setDrawColor(180,60,60);
+  } else if(status === "pending"){
+    doc.setFillColor(255,235,150); doc.setDrawColor(180,140,30);
   } else {
-    doc.setFillColor(190,235,190);
-    doc.setDrawColor(60,160,60);
+    doc.setFillColor(190,235,190); doc.setDrawColor(60,160,60);
   }
-  doc.setLineWidth(0.4);
-  doc.roundedRect(x, y, w, h, 1.5, 1.5, 'FD');
+  doc.setLineWidth(0.35);
+  doc.roundedRect(x, y, w, h, 1.2, 1.2, 'FD');
 
-  // Seat number — top left, bold, small
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(6);
+  // Seat number — top-left, small bold
+  doc.setFont("times","bold");
+  doc.setFontSize(5.5);
   doc.setTextColor(40,40,40);
-  doc.text(String(num), x+1.5, y+4);
+  doc.text(String(num), x + 1.5, y + 4);
 
-  // Passenger name — split into first name (top) and surname (bottom)
-  if(seat.passengerName){
-    const parts = seat.passengerName.trim().split(" ");
-    const maxChars = Math.floor(w/2.2); // fit within seat width
-
+  // Passenger name split: first name top, SURNAME bottom
+  if(seat.passengerName && status !== "available"){
+    const parts   = seat.passengerName.trim().split(" ");
+    const maxW    = w - 4; // usable width in mm
+    const maxChar = Math.max(6, Math.floor(maxW / 1.7));
     let line1 = "", line2 = "";
     if(parts.length === 1){
-      line1 = parts[0].slice(0, maxChars);
+      line1 = parts[0].slice(0, maxChar);
     } else {
-      // Last word = surname on bottom, rest on top
-      const surname = parts[parts.length-1];
-      const firstName = parts.slice(0,-1).join(" ");
-      line1 = firstName.slice(0, maxChars);
-      line2 = surname.slice(0, maxChars);
+      const surname   = parts[parts.length - 1];
+      const firstName = parts.slice(0, -1).join(" ");
+      line1 = firstName.slice(0, maxChar);
+      line2 = surname.slice(0, maxChar);
     }
-
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(5.5);
+    doc.setFontSize(5);
     doc.setTextColor(20,20,20);
-
     if(line2){
-      // Two lines: first name top, surname bottom
-      doc.text(line1, x + w/2, y + h/2 - 0.5, {align:"center"});
-      doc.setFont("helvetica","bold");
-      doc.text(line2, x + w/2, y + h/2 + 4.5, {align:"center"});
+      doc.setFont("times","normal");
+      doc.text(line1, x + w/2, y + h/2 - 0.8, {align:"center"});
+      doc.setFont("times","bold");
+      doc.text(line2.toUpperCase(), x + w/2, y + h/2 + 4, {align:"center"});
     } else {
+      doc.setFont("times","normal");
       doc.text(line1, x + w/2, y + h/2 + 2, {align:"center"});
     }
     doc.setTextColor(0,0,0);
   }
+}
+
+/* ════════════════════════════════════════
+   BUILD BUS LAYOUT PDF
+   Called by both Bus panel and Bookings panel
+════════════════════════════════════════ */
+async function buildBusLayoutPDF(){
+  const seats    = await (await fetch("/api/seats")).json();
+  const settings = await (await fetch("/api/settings")).json();
+  const logo     = await loadLogo2();
+  const {jsPDF}  = window.jspdf;
+
+  // Portrait A4
+  const doc = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+  const pW  = doc.internal.pageSize.getWidth();   // 210
+  const pH  = doc.internal.pageSize.getHeight();  // 297
+  const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+
+  pdfHeader(doc, "Bus Seat Layout", logo);
+
+  // Departure info — centred below header
+  doc.setFont("times","normal");
+  doc.setFontSize(9);
+  doc.setTextColor(60,60,60);
+  const tripLine =
+    "Departure: " + (settings.departureDate||"") +
+    "  at  "     + (settings.departureTime||"") +
+    "  |  Venue: "+ (settings.departureVenue||"");
+  doc.text(tripLine, pW/2, 43, {align:"center"});
+  doc.setTextColor(0,0,0);
+
+  // ── BUS DIMENSIONS ──
+  // Seat size — wide enough for names, tall enough for two text lines
+  const seatW  = 28;
+  const seatH  = 15;
+  const gap    = 2.5;
+  const aisleW = 10;
+
+  // 2 left + aisle + 3 right
+  const busW = 2*seatW + aisleW + 3*seatW + 5*gap;
+  const startX = (pW - busW) / 2;  // centre horizontally
+
+  // Column x positions
+  const col = [
+    startX,
+    startX + seatW + gap,
+    // aisle gap here
+    startX + 2*seatW + aisleW + 2*gap,
+    startX + 2*seatW + aisleW + seatW + 3*gap,
+    startX + 2*seatW + aisleW + 2*seatW + 4*gap
+  ];
+
+  // Bus top — leave room for header + trip info
+  const busTopY = 48;
+
+  // Calculate total bus height
+  const driverH  = 10;
+  const rows13H  = 13 * (seatH + gap);
+  const backGap  = 5;
+  const backH    = seatH;
+  const padBot   = 6;
+  const busH     = driverH + gap + rows13H + backGap + backH + padBot;
+
+  // Bus outer shell (white background, dark border)
+  doc.setFillColor(255,255,255);
+  doc.setDrawColor(50,50,50);
+  doc.setLineWidth(1.0);
+  doc.roundedRect(startX - 5, busTopY, busW + 10, busH, 6, 6, 'FD');
+
+  // Navy top strip (windscreen / front of bus)
+  doc.setFillColor(11,41,77);
+  doc.roundedRect(startX - 5, busTopY, busW + 10, 5, 3, 3, 'F');
+  // Cover bottom corners of navy strip so it looks like a rectangle on top
+  doc.rect(startX - 5, busTopY + 2, busW + 10, 3, 'F');
+
+  // Driver area
+  const driverY = busTopY + 7;
+  doc.setFillColor(220,230,245);
+  doc.setDrawColor(11,41,77);
+  doc.setLineWidth(0.5);
+  doc.rect(startX, driverY, busW, driverH, 'FD');
+  doc.setFont("times","bold");
+  doc.setFontSize(8);
+  doc.setTextColor(11,41,77);
+  doc.text("DRIVER", startX + busW/2, driverY + 6.5, {align:"center"});
+
+  // Draw 13 rows
+  let seatNum  = 1;
+  const rowsY  = driverY + driverH + gap;
+
+  for(let row = 0; row < 13; row++){
+    const y = rowsY + row * (seatH + gap);
+    drawSeatPDF(doc, seats, seatNum++, col[0], y, seatW, seatH);
+    drawSeatPDF(doc, seats, seatNum++, col[1], y, seatW, seatH);
+    // aisle dot
+    doc.setFillColor(200,200,200);
+    doc.circle(startX + 2*seatW + aisleW/2 + gap, y + seatH/2, 0.7, 'F');
+    drawSeatPDF(doc, seats, seatNum++, col[2], y, seatW, seatH);
+    drawSeatPDF(doc, seats, seatNum++, col[3], y, seatW, seatH);
+    drawSeatPDF(doc, seats, seatNum++, col[4], y, seatW, seatH);
+  }
+
+  // Back row — 7 seats spanning full bus interior width
+  const backY      = rowsY + 13*(seatH + gap) + backGap;
+  const backSeatW  = (busW - 6*gap) / 7;
+  doc.setFont("times","italic");
+  doc.setFontSize(6);
+  doc.setTextColor(120,120,120);
+  doc.text("BACK ROW", startX + busW/2, backY - 1.5, {align:"center"});
+  for(let i = 0; i < 7; i++){
+    drawSeatPDF(doc, seats, seatNum++, startX + i*(backSeatW + gap), backY, backSeatW, seatH);
+  }
+
+  // Legend — below bus
+  const legY = busTopY + busH + 6;
+  doc.setFont("times","normal");
+  doc.setFontSize(8);
+  doc.setTextColor(0,0,0);
+  const items = [
+    {label:"Available", fill:[190,235,190], stroke:[60,160,60]},
+    {label:"Booked",    fill:[255,180,180], stroke:[180,60,60]},
+    {label:"Pending",   fill:[255,235,150], stroke:[180,140,30]}
+  ];
+  const legTotalW = items.length * 38;
+  let legX = (pW - legTotalW) / 2;
+  items.forEach(item => {
+    doc.setFillColor(...item.fill);
+    doc.setDrawColor(...item.stroke);
+    doc.setLineWidth(0.4);
+    doc.rect(legX, legY, 6, 4, 'FD');
+    doc.setTextColor(0,0,0);
+    doc.text(item.label, legX + 8, legY + 3.3);
+    legX += 38;
+  });
+
+  pdfFooter(doc, dateStr);
+  return doc;
+}
+
+/* ════════════════════════════════════════
+   DOWNLOAD BUS LAYOUT — Bus panel button
+════════════════════════════════════════ */
+async function downloadBusPDF(){
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+  try{
+    const doc = await buildBusLayoutPDF();
+    doc.save("PolyCoach-Bus-Layout-" + new Date().toISOString().slice(0,10) + ".pdf");
+  }catch(err){
+    alert("Could not generate PDF. Please try again.");
+    console.error(err);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Download Bus Layout';
+}
+
+/* ════════════════════════════════════════
+   DOWNLOAD BUS LAYOUT — Bookings panel button
+   (same output as downloadBusPDF)
+════════════════════════════════════════ */
+async function downloadBusLayoutPDF(){
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+  try{
+    const doc = await buildBusLayoutPDF();
+    doc.save("PolyCoach-Bus-Layout-" + new Date().toISOString().slice(0,10) + ".pdf");
+  }catch(err){
+    alert("Could not generate PDF. Please try again.");
+    console.error(err);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Download Bus Layout';
+}
+
+/* ════════════════════════════════════════
+   DOWNLOAD REGISTRATION LIST
+════════════════════════════════════════ */
+async function downloadUsersPDF(){
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+  try{
+    const users   = await (await fetch("/api/admin/users")).json();
+    const logo    = await loadLogo2();
+    const {jsPDF} = window.jspdf;
+    const doc     = new jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+    const pW      = doc.internal.pageSize.getWidth();
+    const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+
+    pdfHeader(doc, "Registration List", logo);
+
+    // Sub-info line
+    doc.setFont("times","italic");
+    doc.setFontSize(9);
+    doc.setTextColor(90,90,90);
+    doc.text("Total Students: " + users.length, pW - 14, 43, {align:"right"});
+    doc.setTextColor(0,0,0);
+
+    // Table
+    const rows = users.map((u, i) => [
+      String(i + 1),
+      u.fullName   || "-",
+      u.regNumber  || "-",
+      u.phone      || "-"
+    ]);
+
+    doc.autoTable({
+      startY: 46,
+      head: [["#", "Full Name", "Registration Number", "Phone"]],
+      body: rows,
+      styles:{
+        font:        "times",
+        fontSize:    10.5,
+        cellPadding: {top:4, bottom:4, left:4, right:4},
+        textColor:   [0,0,0],
+        lineColor:   [200,215,230],
+        lineWidth:   0.3,
+        valign:      "middle"
+      },
+      headStyles:{
+        fillColor:  [11,41,77],
+        textColor:  [255,255,255],
+        fontStyle:  "bold",
+        fontSize:   10,
+        font:       "times",
+        cellPadding:{top:5, bottom:5, left:4, right:4}
+      },
+      alternateRowStyles:{ fillColor:[240,246,255] },
+      columnStyles:{
+        0:{cellWidth:12,  halign:"center", fontStyle:"bold"},
+        1:{cellWidth:72},
+        2:{cellWidth:60},
+        3:{cellWidth:38}
+      },
+      margin:{left:14, right:14, top:47, bottom:22},
+      didDrawPage: function(){
+        pdfHeader(doc, "Registration List", logo);
+      }
+    });
+
+    pdfFooter(doc, dateStr);
+    doc.save("PolyCoach-Registration-List-" + new Date().toISOString().slice(0,10) + ".pdf");
+  }catch(err){
+    alert("Could not generate Registration List PDF. Please try again.");
+    console.error(err);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Download List';
 }
 
 /* ── LOGOUT ── */
