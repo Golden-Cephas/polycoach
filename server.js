@@ -188,9 +188,6 @@ app.use(session({
 }));
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "Home-Page.html"));
-});
 /* ════════════════════════════════════════
    RATE LIMITING
 ════════════════════════════════════════ */
@@ -218,6 +215,20 @@ function requireAdmin(req, res, next) {
   if (req.session.user && req.session.user.role === "admin") return next();
   res.status(403).json({ success: false, message: "Admin only" });
 }
+
+/* ════════════════════════════════════════
+   CLOUDINARY TEST ROUTE (admin only)
+   Visit /api/cloudinary-status to check
+════════════════════════════════════════ */
+app.get("/api/cloudinary-status", (req, res) => {
+  res.json({
+    configured: CLOUDINARY_CONFIGURED,
+    cloud: process.env.CLOUDINARY_CLOUD || "NOT SET",
+    keySet: !!process.env.CLOUDINARY_KEY,
+    secretSet: !!process.env.CLOUDINARY_SECRET,
+    mongoUri: !!process.env.MONGODB_URI
+  });
+});
 
 /* ════════════════════════════════════════
    ROUTES

@@ -593,9 +593,14 @@ async function deleteBooking(id){
   }
 }
 
-function viewProof(filename){
+function viewProof(url){
   const img=document.getElementById("proofImg");
-  img.src="/uploads/payments/"+filename;
+  // url is either a full Cloudinary URL or a local filename (legacy)
+  if(url && (url.startsWith("http://") || url.startsWith("https://"))){
+    img.src=url; // Cloudinary full URL
+  } else {
+    img.src="/uploads/payments/"+url; // legacy local path fallback
+  }
   img.style.display="block";
   document.getElementById("proofModal").style.display="flex";
 }
