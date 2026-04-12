@@ -29,7 +29,7 @@
     <button class="Header-Button" onclick="location.href='Home-Page.html'">Home</button>
     <button class="Header-Button" onclick="location.href='Book-Login.html'">Book</button>
     <button class="Header-Button" onclick="location.href='Help.html'">Help</button>
-    <button class="Register-Button" onclick="logout()">Logout</button>
+    <button class="Register-Button" onclick="location.href='Book-Login.html'">Book a Seat</button>
   </div>
 </div>
 
@@ -81,8 +81,18 @@ const tooltip=document.getElementById("seatTooltip");
 document.addEventListener("mousemove",e=>{if(tooltip.style.display!=="none"){tooltip.style.left=(e.clientX+14)+"px";tooltip.style.top=(e.clientY-30)+"px";}});
 
 (async()=>{
-  const sr=await fetch("/api/session");const sd=await sr.json();
-  if(!sd.loggedIn){window.location.href="Status-Login.html";return;}
+  // No login required to view bus status
+  // But if already logged in as admin, offer dashboard link
+  try{
+    const sr=await fetch("/api/session");const sd=await sr.json();
+    if(sd.loggedIn && sd.user && sd.user.role==="admin"){
+      // Show a small admin link at top
+      const bar=document.createElement("div");
+      bar.style="background:#0b294d;color:#fff;text-align:center;padding:8px;font-size:0.85rem;";
+      bar.innerHTML='You are logged in as Admin. <a href="Admin-Dashboard.html" style="color:#0099ff;font-weight:700;">Go to Admin Dashboard</a>';
+      document.body.insertBefore(bar,document.body.firstChild);
+    }
+  }catch(e){}
   await loadSeats();
 })();
 
@@ -122,7 +132,7 @@ function renderSeat(seats,num,parent,cnt){
   parent.appendChild(div);
 }
 
-async function logout(){await fetch("/api/logout");localStorage.clear();window.location.href="Home-Page.html";}
+// No logout needed — this page is public
 // Auto-refresh every 30s
 setInterval(loadSeats,30000);
 </script>
