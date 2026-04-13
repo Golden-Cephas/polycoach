@@ -149,6 +149,8 @@ app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
+
+app.get('/', (req, res) => res.redirect('/Home-Page.html'));
 app.use(express.static(path.join(__dirname, "public")));
 
 /* ════════════════════════════════════════
