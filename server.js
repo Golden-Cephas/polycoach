@@ -49,13 +49,15 @@ const upload = multer({
    SCHEMAS
 ════════════════════════════════════════ */
 const userSchema = new mongoose.Schema({
-  fullName:  { type: String, required: true },
-  phone:     { type: String, required: true, unique: true },
-  regNumber: { type: String, required: true, unique: true },
-  password:  { type: String, required: true },
-  // Student ID stored as base64 data URL
-  studentID: { type: String, default: null },
-  createdAt: { type: Date, default: Date.now }
+  fullName:    { type: String, required: true },
+  phone:       { type: String, required: true, unique: true },
+  program:     { type: String, default: "" },
+  destination: { type: String, default: "" },
+  // Legacy fields — kept optional for backward compatibility
+  regNumber:   { type: String, default: "" },
+  password:    { type: String, default: "" },
+  studentID:   { type: String, default: null },
+  createdAt:   { type: Date, default: Date.now }
 });
 const User = mongoose.model("User", userSchema);
 
@@ -80,6 +82,7 @@ const bookingSchema = new mongoose.Schema({
   passengerName: String,
   destination:   String,
   phone:         String,
+  program:       { type: String, default: "" },
   // Payment proof stored as base64 data URL
   paymentProof:  { type: String, default: null },
   status:        { type: String, enum: ["pending","approved","rejected"], default: "pending" },
@@ -146,7 +149,6 @@ app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
-app.get('/', (req, res) => res.redirect('/Home-Page.html'));
 app.use(express.static(path.join(__dirname, "public")));
 
 /* ════════════════════════════════════════
@@ -169,8 +171,9 @@ function loginRateLimit(req, res, next) {
    AUTH MIDDLEWARE
 ════════════════════════════════════════ */
 function requireUser(req, res, next) {
-  if (req.session.user) return next();
-  res.status(401).json({ success: false, message: "Not authenticated" });
+  // Allow if admin logged in OR if booking form was filled
+  if (req.session.user || req.session.bookingFilled) return next();
+  res.status(401).json({ success: false, message: "Please fill in the booking form first." });
 }
 function requireAdmin(req, res, next) {
   if (req.session.user && req.session.user.role === "admin") return next();
@@ -212,23 +215,23 @@ app.get("/api/settings", async (req, res) => {
 });
 
 // ── REGISTER ──
-app.post("/api/register", (req, res, next) => {
-  upload.single("studentID")(req, res, (err) => {
-    if (err) console.error("Register upload error (non-fatal):", err.message);
-    next(); // always continue even if file fails
-  });
-}, async (req, res) => {
-  const { name, phone, regNumber, password } = req.body;
-  if (!name || !phone || !regNumber || !password)
+app.post("/api/register", async (req, res) => {
+  const { name, phone, program, destination } = req.body;
+  if (!name || !phone || !program || !destination)
     return res.json({ success: false, message: "All fields are required." });
   try {
-    const exists = await User.findOne({ $or: [{ phone }, { regNumber }] });
-    if (exists)
-      return res.json({ success: false, message: "Phone or Registration Number already registered." });
-    const hashed = await bcrypt.hash(password, 10);
-    const studentID = fileToDataURL(req.file); // base64 or null
-    await User.create({ fullName: name, phone, regNumber, password: hashed, studentID });
-    res.json({ success: true });
+    // If phone already exists — return success without duplicating
+    const exists = await User.findOne({ phone });
+    if (exists) {
+      // Update program/destination in case they changed
+      exists.fullName = name;
+      exists.program = program;
+      exists.destination = destination;
+      await exists.save();
+      return res.json({ success: true, existing: true });
+    }
+    await User.create({ fullName: name, phone, program, destination });
+    res.json({ success: true, existing: false });
   } catch (err) {
     console.error("Registration error:", err.message);
     res.json({ success: false, message: "Registration failed. Please try again." });
@@ -268,6 +271,30 @@ app.get("/api/seats", async (req, res) => {
 });
 
 // ── UPLOAD PAYMENT PROOF ──
+// Book form filled — store credentials in session, allow proceeding
+app.post("/api/booking-session", async (req, res) => {
+  const { fullName, phone, program, destination } = req.body;
+  if (!fullName || !phone || !program || !destination)
+    return res.json({ success: false, message: "Please fill in all fields." });
+  // Save or update user record
+  try {
+    const exists = await User.findOne({ phone });
+    if (exists) {
+      exists.fullName = fullName; exists.program = program; exists.destination = destination;
+      await exists.save();
+    } else {
+      await User.create({ fullName, phone, program, destination });
+    }
+  } catch(err) { console.error("booking-session user save:", err.message); }
+  // Mark session as booking-filled
+  req.session.bookingFilled = true;
+  req.session.bookingUser = { fullName, phone, program, destination };
+  req.session.save(err => {
+    if (err) return res.json({ success: false, message: "Session error." });
+    res.json({ success: true });
+  });
+});
+
 app.post("/api/upload-payment", requireUser, (req, res, next) => {
   upload.single("paymentProof")(req, res, (err) => {
     if (err) {
@@ -310,15 +337,17 @@ app.post("/api/book-seat", requireUser, async (req, res) => {
     if (!seat) return res.status(404).json({ success: false, message: "Seat not found." });
     if (seat.status !== "available")
       return res.status(409).json({ success: false, message: "Seat already taken. Please choose another." });
+    const bookUser = req.session.bookingUser || req.session.user || {};
     seat.status = "pending";
     seat.passengerName = passengerName;
-    seat.destination = destination || "";
-    seat.phone = req.session.user.phone;
+    seat.destination = destination || bookUser.destination || "";
+    seat.phone = bookUser.phone || "";
     await seat.save();
     await Booking.create({
       seatNumber: seatNum, passengerName,
-      destination: destination || "",
-      phone: req.session.user.phone,
+      destination: destination || bookUser.destination || "",
+      phone: bookUser.phone || "",
+      program: bookUser.program || "",
       paymentProof: req.session.paymentProof || null,
       status: "pending"
     });
@@ -335,12 +364,11 @@ app.post("/api/book-seat", requireUser, async (req, res) => {
 ════════════════════════════════════════ */
 // Users
 app.get("/api/admin/users", requireAdmin, async (req, res) => {
-  // Don't send base64 studentID in list (too large) — send flag instead
   const users = await User.find().select("-password").sort({ createdAt: -1 }).lean();
   res.json(users.map(u => ({
     ...u,
     hasStudentID: !!u.studentID,
-    studentID: u.studentID ? "has_file" : null // don't send full base64 in list
+    studentID: u.studentID ? "has_file" : null
   })));
 });
 
@@ -482,7 +510,25 @@ app.post("/api/admin/reset-admin-password", requireAdmin, async (req, res) => {
 ════════════════════════════════════════ */
 mongoose.connection.once("open", async () => {
   await seedDatabase();
-  /* ── KEEP-ALIVE: prevents Render free tier sleep ── */
+  /* ── RECEIPT: downloadable booking receipt for admin ── */
+app.get("/api/admin/bookings/:id/receipt", requireAdmin, async (req, res) => {
+  const b = await Booking.findById(req.params.id);
+  if (!b) return res.status(404).json({ success: false });
+  res.json({
+    success: true,
+    receipt: {
+      passengerName: b.passengerName,
+      phone:         b.phone,
+      program:       b.program || "",
+      destination:   b.destination,
+      seatNumber:    b.seatNumber,
+      status:        b.status,
+      createdAt:     b.createdAt
+    }
+  });
+});
+
+/* ── KEEP-ALIVE: prevents Render free tier sleep ── */
 app.get("/ping",(req,res)=>res.json({status:"alive",time:new Date().toISOString()}));
 
 function keepAlive(){

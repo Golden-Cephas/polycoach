@@ -41,7 +41,7 @@ function showOtherInput(){
 }
 function bookForMyself(){
   const u=JSON.parse(localStorage.getItem("polycoachUser")||"null");
-  if(!u){alert("Session expired. Please login again.");window.location.href="Book-Login.html";return;}
+  if(!u){alert("Please fill in the booking form first.");window.location.href="Book-Login.html";return;}
   localStorage.setItem("passengerName",u.fullName);
   closeBookingPopup();
   window.location.href="Payment-Upload.html";

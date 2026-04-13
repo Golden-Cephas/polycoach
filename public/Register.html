@@ -10,8 +10,6 @@
 .reg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .reg-grid .full{grid-column:span 2;}
 .reg-hint{font-size:0.78rem;color:var(--muted);margin-top:4px;}
-.file-label{display:flex;align-items:center;gap:10px;background:#f4f7f9;border:1px dashed #0099ff;border-radius:6px;padding:12px;cursor:pointer;color:var(--primary);font-weight:700;font-size:0.88rem;}
-.file-label input{display:none;}
 #msg{margin-top:14px;padding:12px;border-radius:6px;font-weight:700;display:none;}
 #msg.success{background:#e6f4ea;color:#2e7d32;}
 #msg.error{background:#fdecea;color:var(--danger);}
@@ -34,44 +32,47 @@
 </div>
 
 <div class="Page-Body-Hero">
-  <div class="page-card-container" style="max-width:560px;">
+  <div class="page-card-container" style="max-width:520px;">
     <div class="page-hero-title">
       <h1>Student Registration</h1>
-      <p>Use your official MUBAS details to create your account.</p>
+      <p>Use your details to create your PolyCoach account.</p>
     </div>
     <div class="form-card">
-      <form id="regForm" enctype="multipart/form-data">
+      <form id="regForm">
         <div class="reg-grid">
+
           <div class="input-group full">
             <label>Full Name</label>
             <input type="text" id="name" placeholder="Enter your full name" required>
           </div>
-          <div class="input-group">
-            <label>Registration Number</label>
-            <input type="text" id="regNumber" placeholder="BEEE/22/SS/033" required>
-            <span class="reg-hint">Must be writen in slash format  </span>
+
+          <div class="input-group full">
+            <label>Program</label>
+            <input type="text" id="program" placeholder="e.g. BEEE4, BCS3, BARCH2" required>
+            <span class="reg-hint">Your course and year e.g. BEEE4</span>
           </div>
-          <div class="input-group">
+
+          <div class="input-group full">
             <label>Phone Number</label>
             <input type="tel" id="phone" placeholder="099..." required>
           </div>
+
           <div class="input-group full">
-            <label>Password</label>
-            <input type="password" id="password" placeholder="Create a password" required>
+            <label>Destination</label>
+            <select id="destination" required>
+              <option value="" disabled selected>-- Choose Destination --</option>
+              <option value="Mzuzu">Mzuzu</option>
+              <option value="Jenda">Jenda</option>
+              <option value="Mzimba">Mzimba</option>
+              <option value="Kasungu">Kasungu</option>
+            </select>
           </div>
-          <div class="input-group full">
-            <label>Upload Student ID/Recent Photo</label>
-            <label class="file-label">
-              <i class="fa-solid fa-id-card"></i>
-              <span id="fileLabel">Choose Student ID image...</span>
-              <input type="file" id="studentID" accept="image/*">
-            </label>
-          </div>
+
         </div>
         <button type="submit" class="submit-btn">REGISTER NOW</button>
         <div id="msg"></div>
         <div class="login-footer">
-          <p>Already have an account? <a href="Book-Login.html">Login to book</a></p>
+          <p>Already registered? <a href="Book-Login.html">Click here to book</a></p>
         </div>
       </form>
     </div>
@@ -98,36 +99,42 @@
 
 <script src="/js/popup.js"></script>
 <script>
-document.getElementById("studentID").addEventListener("change",function(){
-  const fl=document.getElementById("fileLabel");
-  fl.textContent=this.files[0]?this.files[0].name:"Choose Student ID image...";
-});
-
-document.getElementById("regForm").addEventListener("submit",async function(e){
+document.getElementById("regForm").addEventListener("submit", async function(e){
   e.preventDefault();
-  const msg=document.getElementById("msg");
-  const regNum=document.getElementById("regNumber").value.trim();
-  const slashes=(regNum.match(/\//g)||[]).length;
-  if(slashes!==3){
+  const msg  = document.getElementById("msg");
+  const btn  = this.querySelector("button[type=submit]");
+  const name = document.getElementById("name").value.trim();
+  const prog = document.getElementById("program").value.trim();
+  const phone= document.getElementById("phone").value.trim();
+  const dest = document.getElementById("destination").value;
+
+  if(!name||!prog||!phone||!dest){
     msg.className="error";msg.style.display="block";
-    msg.textContent="Invalid Registration Number format. Must contain exactly 3 slashes (e.g. BEEE/22/EE/01).";
-    return;
+    msg.textContent="Please fill in all fields.";return;
   }
-  const btn=this.querySelector("button[type=submit]");
+
   btn.disabled=true;btn.textContent="Registering...";
-  const fd=new FormData();
-  fd.append("name",document.getElementById("name").value);
-  fd.append("regNumber",regNum);
-  fd.append("phone",document.getElementById("phone").value);
-  fd.append("password",document.getElementById("password").value);
-  const f=document.getElementById("studentID").files[0];
-  if(f) fd.append("studentID",f);
+  msg.style.display="none";
+
   try{
-    const r=await fetch("/api/register",{method:"POST",body:fd});
+    const r=await fetch("/api/register",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name,program:prog,phone,destination:dest})
+    });
     const d=await r.json();
-    if(d.success){window.location.href="Thanks-Remark1.html";}
-    else{msg.className="error";msg.style.display="block";msg.textContent=d.message||"Registration failed.";btn.disabled=false;btn.textContent="REGISTER NOW";}
-  }catch{msg.className="error";msg.style.display="block";msg.textContent="Server error. Please try again.";btn.disabled=false;btn.textContent="REGISTER NOW";}
+    if(d.success){
+      window.location.href="Thanks-Remark1.html";
+    } else {
+      msg.className="error";msg.style.display="block";
+      msg.textContent=d.message||"Registration failed. Please try again.";
+      btn.disabled=false;btn.textContent="REGISTER NOW";
+    }
+  }catch{
+    msg.className="error";msg.style.display="block";
+    msg.textContent="Server error. Please try again.";
+    btn.disabled=false;btn.textContent="REGISTER NOW";
+  }
 });
 </script>
 </body>

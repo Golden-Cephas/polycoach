@@ -202,7 +202,7 @@ tr:hover td{background:#fafafa;}
       </div>
       <div style="overflow-x:auto;">
         <table id="usersTable">
-          <thead><tr><th>Full Name</th><th>Phone</th><th>Reg Number</th><th>Student ID</th><th>Date</th><th>Action</th></tr></thead>
+          <thead><tr><th>Full Name</th><th>Phone</th><th>Program</th><th>Destination</th><th>Date</th><th>Action</th></tr></thead>
           <tbody id="usersTbody"></tbody>
         </table>
       </div>
@@ -227,7 +227,7 @@ tr:hover td{background:#fafafa;}
       </div>
       <div style="overflow-x:auto;">
         <table id="bookingsTable">
-          <thead><tr><th>Passenger</th><th>Seat</th><th>Destination</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Passenger</th><th>Program</th><th>Seat</th><th>Destination</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="bookingsTbody"></tbody>
         </table>
       </div>
@@ -488,8 +488,8 @@ async function loadUsers(){
       const uid = u._id || u.id;
       const tr=document.createElement("tr");
       tr.id="user-row-"+uid;
-      tr.innerHTML=`<td><strong>${u.fullName}</strong></td><td>${u.phone}</td><td>${u.regNumber}</td>
-      <td>${u.hasStudentID?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewStudentID('${uid}','${u.fullName}')"><i class="fa-solid fa-id-card"></i> View ID</button>`:"None"}</td>
+      tr.innerHTML=`<td><strong>${u.fullName}</strong></td><td>${u.phone}</td><td>${u.program||u.regNumber||"—"}</td>
+      <td>${u.destination||"—"}</td>
       <td style="font-size:0.78rem;color:#888;">${u.createdAt?new Date(u.createdAt).toLocaleDateString():"-"}</td>
       <td><button class="btn btn-delete" id="delbtn-${uid}" onclick="deleteUser('${uid}','${u.fullName}')"><i class="fa-solid fa-trash"></i></button></td>`;
       tbody.appendChild(tr);
@@ -560,12 +560,14 @@ async function loadBookings(){
     tr.id="booking-row-"+bid;
     const badgeClass=b.status==="pending"?"badge-pending":b.status==="approved"?"badge-approved":"badge-rejected";
     tr.innerHTML=`<td><strong>${b.passengerName}</strong><br><span style="font-size:0.75rem;color:#888;">${b.phone||""}</span></td>
+    <td>${b.program||"—"}</td>
     <td><strong>Seat ${b.seatNumber}</strong></td>
     <td>${b.destination||"—"}</td>
     <td>${b.hasPaymentProof?`<button class="btn" style="background:#f0f4ff;color:var(--primary);" onclick="viewProof('${bid}')"><i class="fa-solid fa-image"></i> View</button>`:"None"}</td>
     <td><span class="${badgeClass}">${b.status.toUpperCase()}</span></td>
     <td style="display:flex;gap:5px;flex-wrap:wrap;">
       ${b.status==="pending"?`<button class="btn btn-approve" onclick="approveBooking('${b._id||b.id}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-reject" onclick="rejectBooking('${b._id||b.id}')"><i class="fa-solid fa-xmark"></i></button>`:""}
+      ${b.status==="approved"?`<button class="btn" style="background:#0b294d;color:#fff;" onclick="downloadReceipt('${b._id||b.id}','${b.passengerName}')"><i class="fa-solid fa-receipt"></i></button>`:``}
       <button class="btn btn-delete" onclick="deleteBooking('${b._id||b.id}')"><i class="fa-solid fa-trash"></i></button>
     </td>`;
     tbody.appendChild(tr);
@@ -1368,14 +1370,15 @@ async function downloadUsersPDF(){
     // Table
     const rows = users.map((u, i) => [
       String(i + 1),
-      u.fullName   || "-",
-      u.regNumber  || "-",
-      u.phone      || "-"
+      u.fullName    || "-",
+      u.program     || u.regNumber || "-",
+      u.phone       || "-",
+      u.destination || "-"
     ]);
 
     doc.autoTable({
       startY: 46,
-      head: [["#", "Full Name", "Registration Number", "Phone"]],
+      head: [["#", "Full Name", "Program", "Phone", "Destination"]],
       body: rows,
       styles:{
         font:        "times",
@@ -1396,10 +1399,11 @@ async function downloadUsersPDF(){
       },
       alternateRowStyles:{ fillColor:[240,246,255] },
       columnStyles:{
-        0:{cellWidth:12,  halign:"center", fontStyle:"bold"},
-        1:{cellWidth:72},
-        2:{cellWidth:60},
-        3:{cellWidth:38}
+        0:{cellWidth:10,  halign:"center", fontStyle:"bold"},
+        1:{cellWidth:58},
+        2:{cellWidth:30},
+        3:{cellWidth:36},
+        4:{cellWidth:38}
       },
       margin:{left:14, right:14, top:47, bottom:22},
       didDrawPage: function(){
@@ -1415,6 +1419,93 @@ async function downloadUsersPDF(){
   }
   btn.disabled = false;
   btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Download List';
+}
+
+/* ── RECEIPT DOWNLOAD ── */
+async function downloadReceipt(id, name){
+  try{
+    const r=await fetch("/api/admin/bookings/"+id+"/receipt");
+    const d=await r.json();
+    if(!d.success){alert("Could not load receipt.");return;}
+    const rc=d.receipt;
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const pW=doc.internal.pageSize.getWidth();
+    const dateStr=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+    const logo=await loadLogo2();
+
+    // Header
+    doc.setFillColor(11,41,77);
+    doc.rect(0,0,pW,36,'F');
+    if(logo){try{doc.addImage(logo,'PNG',10,4,28,28);}catch(e){}}
+    doc.setFont("times","bold");doc.setFontSize(17);doc.setTextColor(255,255,255);
+    doc.text("PolyCoach",42,16);
+    doc.setFont("times","normal");doc.setFontSize(8.5);doc.setTextColor(180,210,255);
+    doc.text("Student Bus Booking System  —  MUBAS",42,23);
+    doc.setFont("times","bold");doc.setFontSize(13);doc.setTextColor(255,255,255);
+    doc.text("Booking Receipt",pW-12,20,{align:"right"});
+    doc.setDrawColor(0,153,255);doc.setLineWidth(1.5);doc.line(0,36,pW,36);
+
+    // Receipt body
+    doc.setTextColor(0,0,0);
+    doc.setFont("times","bold");doc.setFontSize(14);
+    doc.text("BOOKING CONFIRMED",pW/2,50,{align:"center"});
+    doc.setDrawColor(0,153,255);doc.setLineWidth(0.5);
+    doc.line(14,53,pW-14,53);
+
+    // Green checkmark area
+    doc.setFillColor(230,250,235);
+    doc.roundedRect(14,57,pW-28,14,3,3,'F');
+    doc.setFont("times","bold");doc.setFontSize(11);doc.setTextColor(40,120,60);
+    doc.text("✓  Your seat has been confirmed by the administrator.",pW/2,66,{align:"center"});
+
+    // Details table
+    const details=[
+      ["Passenger Name",rc.passengerName||"—"],
+      ["Program",rc.program||"—"],
+      ["Phone Number",rc.phone||"—"],
+      ["Destination",rc.destination||"—"],
+      ["Seat Number","Seat "+rc.seatNumber],
+      ["Booking Status",rc.status?rc.status.toUpperCase():"—"],
+      ["Booking Date",rc.createdAt?new Date(rc.createdAt).toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}):"—"],
+      ["Issued On",dateStr]
+    ];
+
+    let rowY=80;
+    details.forEach(([label,val],i)=>{
+      const bg=i%2===0?[245,248,252]:[255,255,255];
+      doc.setFillColor(...bg);
+      doc.rect(14,rowY,pW-28,10,'F');
+      doc.setFont("times","bold");doc.setFontSize(10);doc.setTextColor(11,41,77);
+      doc.text(label,20,rowY+7);
+      doc.setFont("times","normal");doc.setFontSize(10);doc.setTextColor(0,0,0);
+      doc.text(String(val),pW/2,rowY+7);
+      rowY+=10;
+    });
+
+    // Border around details
+    doc.setDrawColor(200,215,230);doc.setLineWidth(0.4);
+    doc.rect(14,80,pW-28,details.length*10);
+
+    // Note
+    rowY+=8;
+    doc.setFont("times","italic");doc.setFontSize(9);doc.setTextColor(120,120,120);
+    doc.text("Please present this receipt on your day of travel.",pW/2,rowY,{align:"center"});
+
+    // Footer
+    const pH=doc.internal.pageSize.getHeight();
+    doc.setDrawColor(0,153,255);doc.setLineWidth(0.8);doc.line(0,pH-18,pW,pH-18);
+    doc.setFillColor(11,41,77);doc.rect(0,pH-17,pW,17,'F');
+    doc.setFont("times","normal");doc.setFontSize(8);doc.setTextColor(255,255,255);
+    doc.text("polycoachsupport@gmail.com  |  +265 881 730 203  |  MUBAS, Blantyre, Malawi",14,pH-9);
+    doc.text("Printed: "+dateStr,14,pH-4);
+    doc.text("Page 1 of 1",pW-12,pH-6,{align:"right"});
+
+    doc.save("PolyCoach-Receipt-"+rc.passengerName.replace(/\s+/g,"-")+"-Seat"+rc.seatNumber+".pdf");
+  }catch(err){
+    alert("Could not generate receipt.");
+    console.error(err);
+  }
 }
 
 /* ── LOGOUT ── */
