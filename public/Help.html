@@ -8,22 +8,29 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 .help-body{background:#f0f2f5;padding:48px 20px;}
-.help-container{max-width:860px;margin:0 auto;}
-.help-card{background:#fff;border-radius:12px;padding:36px;margin-bottom:20px;box-shadow:0 3px 12px rgba(0,0,0,0.06);}
-.help-card h2{font-family:'Barlow Condensed',sans-serif;color:var(--primary);font-size:1.6rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:12px;}
-.help-card h2 i{color:var(--accent);}
-.help-card p,.help-card li{color:#555;line-height:1.7;font-size:0.97rem;}
-.help-card ul{padding-left:20px;margin-top:8px;}
-.help-card li{margin-bottom:6px;}
+.help-container{max-width:820px;margin:0 auto;}
+.help-title{font-family:'Barlow Condensed',sans-serif;font-size:2.4rem;font-weight:900;color:var(--primary);margin-bottom:8px;text-transform:uppercase;}
+.help-subtitle{color:#777;font-size:1rem;margin-bottom:30px;}
+.help-card{background:#fff;border-radius:12px;padding:32px 36px;margin-bottom:18px;box-shadow:0 3px 12px rgba(0,0,0,0.06);}
+.help-card h2{font-family:'Barlow Condensed',sans-serif;color:var(--primary);font-size:1.5rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.help-card h2 i{color:var(--accent);font-size:1.2rem;}
+.help-card p{color:#555;line-height:1.75;font-size:0.97rem;margin-bottom:0;}
+.help-card p+p{margin-top:10px;}
+.tip-box{background:#f0f7ff;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:14px;font-size:0.9rem;color:#333;}
+.tip-box i{color:var(--accent);margin-right:6px;}
 .contact-card{background:linear-gradient(135deg,var(--primary),#0d3d73);border-radius:12px;padding:36px;color:#fff;margin-bottom:20px;}
-.contact-card h2{font-family:'Barlow Condensed',sans-serif;font-size:1.8rem;font-weight:900;margin-bottom:18px;}
-.contact-card p{line-height:1.8;font-size:1rem;color:#dde;}
+.contact-card h2{font-family:'Barlow Condensed',sans-serif;font-size:1.8rem;font-weight:900;margin-bottom:16px;}
+.contact-card p{line-height:1.9;font-size:1rem;color:#dde;}
 .contact-card strong{color:#fff;}
 </style>
 </head>
 <body>
+
 <div class="Home-Page-Header">
-  <div class="Left-Header" onclick="location.href='Home-Page.html'"><img src="/Images/Logo1.png" class="Logo1" alt="Logo"><div class="Logo-Text">PolyCoach</div></div>
+  <div class="Left-Header" onclick="location.href='Home-Page.html'">
+    <img src="/Images/Logo1.png" class="Logo1" alt="Logo">
+    <div class="Logo-Text">PolyCoach</div>
+  </div>
   <div class="Right-Header">
     <button class="Header-Button" onclick="location.href='Home-Page.html'">Home</button>
     <button class="Header-Button" onclick="location.href='Book-Login.html'">Book</button>
@@ -34,42 +41,74 @@
 
 <div class="help-body">
   <div class="help-container">
-    <h1 style="font-family:'Barlow Condensed',sans-serif;font-size:2.4rem;font-weight:900;color:var(--primary);margin-bottom:24px;text-transform:uppercase;">Help Center</h1>
 
+    <h1 class="help-title">Help Center</h1>
+    <p class="help-subtitle">Everything you need to know about booking your seat with PolyCoach.</p>
+
+    <!-- STEP 1 -->
     <div class="help-card">
-      <h2><i class="fa-solid fa-user-plus"></i> 1. Register</h2>
-      <p>Click <strong>Register</strong> on the Home Page and fill in your details:</p>
-      <ul><li>Full Name</li><li>Registration Number ( e.g. BEEE/22/SS/013)</li><li>Phone Number</li><li>Password</li><li>Upload your Student ID/The most recent photo of yourself</li></ul>
-      <p style="margin-top:8px;">After successful registration you will be redirected to the confirmation page and can proceed to booking.</p>
+      <h2><i class="fa-solid fa-user-plus"></i> 1. Create Your Account</h2>
+      <p>Click <strong>Register</strong> on the Home Page and fill in your details — your full name, program (e.g. BEEE4), phone number, and destination. That is all you need.</p>
+      <p>Once submitted you will be taken to a confirmation page. You are then ready to book.</p>
+      <div class="tip-box">
+        <i class="fa-solid fa-circle-info"></i>
+        Already registered before? You can go straight to <strong>Book</strong> — no need to register again.
+      </div>
     </div>
 
+    <!-- STEP 2 -->
     <div class="help-card">
-      <h2><i class="fa-solid fa-ticket"></i> 2. Booking a Seat</h2>
-      <p>Click <strong>Book</strong>, select your destination, and login. You will then choose whether to book for yourself or another passenger. After that:</p>
-      <ul><li>Upload your <strong>proof of payment</strong> (mobile money screenshot)</li><li>Select your preferred available seat on the bus</li><li>Confirm — your booking will be marked as pending</li></ul>
+      <h2><i class="fa-solid fa-ticket"></i> 2. Book Your Seat</h2>
+      <p>Click <strong>Book</strong> on the Home Page. Fill in your destination, full name, phone number, and program. You will then be asked whether you are booking for yourself or for someone else.</p>
+      <div class="tip-box">
+        <i class="fa-solid fa-circle-info"></i>
+        Booking for a friend or family member? Choose <strong>Book for Someone Else</strong> and enter their name. Your details are still used for the payment.
+      </div>
     </div>
 
+    <!-- STEP 3 -->
     <div class="help-card">
-      <h2><i class="fa-solid fa-money-check-dollar"></i> 3. Payment &amp; Verification</h2>
-      <p>Pay the booking fee of <strong>K5,000</strong> via mobile money, then upload your receipt. An administrator will review and approve your booking. This is a <em>booking fee</em> to secure your seat, and its part of your transport fare.</p>
+      <h2><i class="fa-solid fa-money-bill-wave"></i> 3. Pay the Booking Fee</h2>
+      <p>Send <strong>K5,000</strong> as a booking fee to secure your seat using any of the payment options shown on the payment page — National Bank, Airtel Money, or TNM Mpamba.</p>
+      <p>Take a screenshot of your mobile money confirmation and upload it on the next page. <strong>You cannot proceed without uploading your proof of payment.</strong></p>
+      <div class="tip-box">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        This is a <strong>booking fee</strong> to secure your seat, not the full bus fare. Make sure your screenshot clearly shows the transaction.
+      </div>
     </div>
 
+    <!-- STEP 4 -->
     <div class="help-card">
-      <h2><i class="fa-solid fa-seat"></i> 4. Viewing Seat Status</h2>
-      <p>Click <strong>View Available Seats</strong> on the Home Page, login, and see the live bus layout. Hover over any seat to see who has booked it.</p>
+      <h2><i class="fa-solid fa-couch"></i> 4. Choose Your Seat</h2>
+      <p>After uploading your payment, you will see the bus layout. Green seats are available — click any green seat to select it, then confirm your booking.</p>
+      <p>Once confirmed your seat will appear as pending while your payment is being reviewed.</p>
     </div>
 
+    <!-- STEP 5 -->
     <div class="help-card">
-      <h2><i class="fa-solid fa-shield-halved"></i> 5. Admin </h2>
-      <p>Administrators will  assess  proof of payment and approve/reject payment .</p>
+      <h2><i class="fa-solid fa-circle-check"></i> 5. Payment Verification</h2>
+      <p>After you submit your booking, your proof of payment is reviewed. Once verified, your seat is confirmed and a receipt will be made available to you with your seat number and booking details.</p>
+      <div class="tip-box">
+        <i class="fa-solid fa-circle-info"></i>
+        Contact us on the details below if you have not received confirmation within a reasonable time.
+      </div>
     </div>
 
+    <!-- STEP 6 -->
+    <div class="help-card">
+      <h2><i class="fa-solid fa-bus"></i> 6. View Bus Status</h2>
+      <p>You can check which seats are available, pending, or booked at any time by clicking <strong>View Bus Status</strong> on the Home Page. No login required — the bus layout is open for everyone to see.</p>
+      <p>Hover over any seat to see the name of the person who has booked it.</p>
+    </div>
+
+    <!-- CONTACT -->
     <div class="contact-card">
-      <h2>Need Help?</h2>
+      <h2>Need Assistance?</h2>
       <p><strong>Email:</strong> polycoachsupport@gmail.com</p>
-      <p><strong>Phone:</strong> +265 881 730 203</p>
-      <p style="margin-top:12px;">Our team is available to assist with registration, booking, or payment verification.</p>
+      <p><strong>Phone / WhatsApp:</strong> +265 881 730 203</p>
+      <p style="margin-top:12px;">We are available to help with anything related to registration, payment, or your booking.</p>
     </div>
+
   </div>
 </div>
 
@@ -80,13 +119,23 @@
     <button class="Footer-Button" onclick="openPopup('faq')">FAQs</button>
     <button class="Footer-Button" onclick="openPopup('contact')">Contact</button>
   </div>
-  <div class="Home-Right-Footer"><div class="Footer-Text">Social Media:</div><div class="Social-Container">
-    <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Facebook.png"></div></a>
-    <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Twitter.png"></div></a>
-    <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Whatsapp.png"></div></a>
-  </div></div>
+  <div class="Home-Right-Footer">
+    <div class="Footer-Text">Social Media:</div>
+    <div class="Social-Container">
+      <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Facebook.png"></div></a>
+      <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Twitter.png"></div></a>
+      <a href="https://chat.whatsapp.com/IoxQg9cuzsI1FNG7Awt8Vj" target="_blank"><div class="Footer-Icons"><img src="/Images/Whatsapp.png"></div></a>
+    </div>
+  </div>
 </div>
-<div id="popupOverlay" class="popup-overlay"><div class="popup-box"><div id="popupContent"></div><button class="close-btn" onclick="closePopup()">Close</button></div></div>
+
+<div id="popupOverlay" class="popup-overlay">
+  <div class="popup-box">
+    <div id="popupContent"></div>
+    <button class="close-btn" onclick="closePopup()">Close</button>
+  </div>
+</div>
+
 <script src="/js/popup.js"></script>
 </body>
 </html>
