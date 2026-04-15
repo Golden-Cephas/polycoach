@@ -149,7 +149,6 @@ app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
-
 app.get('/', (req, res) => res.redirect('/Home-Page.html'));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -528,6 +527,31 @@ app.get("/api/admin/bookings/:id/receipt", requireAdmin, async (req, res) => {
       createdAt:     b.createdAt
     }
   });
+});
+
+/* ── ADMIN: register passenger if not already in system ── */
+app.post("/api/admin/register-passenger", requireAdmin, async (req, res) => {
+  const { fullName, destination } = req.body;
+  if (!fullName || !fullName.trim())
+    return res.json({ success: false, message: "Name required." });
+  try {
+    // Check if someone with this exact full name already exists
+    const exists = await User.findOne({
+      fullName: { $regex: new RegExp("^" + fullName.trim() + "$", "i") }
+    });
+    if (exists) return res.json({ success: true, existing: true });
+    // Register with name and destination only — no phone (admin assigned)
+    await User.create({
+      fullName: fullName.trim(),
+      phone:    "admin-" + Date.now(), // placeholder, unique
+      program:  "Admin Assigned",
+      destination: destination || ""
+    });
+    res.json({ success: true, existing: false });
+  } catch (err) {
+    console.error("register-passenger error:", err.message);
+    res.json({ success: false, message: "Could not register passenger." });
+  }
 });
 
 /* ── KEEP-ALIVE: prevents Render free tier sleep ── */

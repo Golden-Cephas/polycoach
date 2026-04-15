@@ -81,9 +81,9 @@
 <div class="section-title">Where are you heading?</div>
 <p class="section-sub">Select your destination and book your seat today</p>
 <div class="routes" id="routeCards">
-  <div class="bus-card"><div class="card-img"><img src="/Images/Mzuzu.jpg" alt="Mzuzu"><div class="card-overlay"><h2>Mzuzu</h2></div></div><div class="card-footer"><div><div class="price-label">Booking Fee</div><div class="price-amount" id="fee1">K5,000</div></div><button class="book-btn" onclick="location.href='Book-Login.html'">Book</button></div></div>
-  <div class="bus-card"><div class="card-img"><img src="/Images/Mzimba.png" alt="Mzimba"><div class="card-overlay"><h2>Mzimba</h2></div></div><div class="card-footer"><div><div class="price-label">Booking Fee</div><div class="price-amount" id="fee2">K5,000</div></div><button class="book-btn" onclick="location.href='Book-Login.html'">Book</button></div></div>
-  <div class="bus-card"><div class="card-img"><img src="/Images/Jenda.jpg" alt="Jenda"><div class="card-overlay"><h2>Jenda</h2></div></div><div class="card-footer"><div><div class="price-label">Booking Fee</div><div class="price-amount" id="fee3">K5,000</div></div><button class="book-btn" onclick="location.href='Book-Login.html'">Book</button></div></div>
+  <div class="bus-card"><div class="card-img"><img src="/Images/Mzuzu.jpg" alt="Mzuzu"><div class="card-overlay"><h2>Mzuzu</h2></div></div><div class="card-footer"><div><div class="price-label" id="lbl1">Booking Fee</div><div class="price-amount" id="fee1">K5,000</div></div><button class="book-btn" onclick="location.href='Book-Login.html'">Book</button></div></div>
+  <div class="bus-card"><div class="card-img"><img src="/Images/Mzimba.png" alt="Mzimba"><div class="card-overlay"><h2>Mzimba</h2></div></div><div class="card-footer"><div><div class="price-label" id="lbl2">Booking Fee</div><div class="price-amount" id="fee2">K5,000</div></div><button class="book-btn" onclick="location.href='Book-Login.html'">Book</button></div></div>
+  <div class="bus-card"><div class="card-img"><img src="/Images/Jenda.jpg" alt="Jenda"><div class="card-overlay"><h2>Jenda</h2></div></div><div class="card-footer"><div><div class="price-label" id="lbl3">Booking Fee</div><div class="price-amount" id="fee3">K5,000</div></div><button class="book-btn" onclick="location.href='Book-Login.html'">Book</button></div></div>
 </div>
 
 <div class="section-title" style="background:#fff;padding-bottom:4px;">Why Book With Us?</div>
@@ -123,7 +123,12 @@ fetch("/api/settings").then(r=>r.json()).then(s=>{
   document.getElementById("depVenue").value=s.departureVenue||"MUBAS";
   document.getElementById("depDate").value=s.departureDate||"15 March 2025";
   document.getElementById("depTime").value=s.departureTime||"18:00 hrs";
-  [1,2,3].forEach(i=>document.getElementById("fee"+i).textContent=s.bookingFee||"K5,000");
+  const label=s.bookingLabel||"Booking Fee";
+  const fee=s.bookingFee||"K5,000";
+  [1,2,3].forEach(i=>{
+    document.getElementById("fee"+i).textContent=fee;
+    document.getElementById("lbl"+i).textContent=label;
+  });
 }).catch(()=>{});
 </script>
 </body>

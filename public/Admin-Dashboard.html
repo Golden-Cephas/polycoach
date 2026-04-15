@@ -459,7 +459,13 @@ async function saveSeatEdit(){
   if(status!=="available"&&!name){alert("Please enter an occupant name.");return;}
   const r=await fetch("/api/admin/seats/"+currentSeatNum,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,passengerName:name,destination:dest})});
   const d=await r.json();
-  if(d.success){loadBus();loadBookings();}
+  if(d.success){
+    // If seat is being assigned to someone, register them if not already in the system
+    if(status!=="available"&&name){
+      await fetch("/api/admin/register-passenger",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fullName:name,destination:dest})});
+    }
+    loadBus();loadBookings();loadUsers();
+  }
   else alert("Error updating seat.");
 }
 
