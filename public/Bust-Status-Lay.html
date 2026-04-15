@@ -138,11 +138,21 @@ function renderSeat(seats,num,parent,cnt){
   div.textContent=num;
   const s=data.status==="booked"||data.status==="taken"?"booked":data.status;
   if(cnt[s]!==undefined) cnt[s]++;
-  div.addEventListener("mouseenter",()=>{
+  div.addEventListener("mouseenter",(e)=>{
     let tip=`Seat ${num}`;
     if(data.passengerName) tip+=` — ${data.passengerName}`;
     else tip+=` (${data.status})`;
-    tooltip.textContent=tip;tooltip.style.display="block";
+    tooltip.textContent=tip;
+    // Make visible but off-screen first to measure width
+    tooltip.style.visibility="hidden";
+    tooltip.style.display="block";
+    const tw=tooltip.offsetWidth;
+    const vw=window.innerWidth;
+    const left=e.clientX+14+tw+10>vw ? e.clientX-tw-10 : e.clientX+14;
+    const top=Math.max(4,e.clientY-30);
+    tooltip.style.left=Math.max(4,left)+"px";
+    tooltip.style.top=top+"px";
+    tooltip.style.visibility="visible";
   });
   div.addEventListener("mouseleave",()=>tooltip.style.display="none");
   parent.appendChild(div);
