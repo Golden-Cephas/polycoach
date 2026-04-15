@@ -78,7 +78,23 @@
 <script src="/js/popup.js"></script>
 <script>
 const tooltip=document.getElementById("seatTooltip");
-document.addEventListener("mousemove",e=>{if(tooltip.style.display!=="none"){tooltip.style.left=(e.clientX+14)+"px";tooltip.style.top=(e.clientY-30)+"px";}});
+document.addEventListener("mousemove",e=>{
+  if(tooltip.style.display!=="none"){
+    const tw=tooltip.offsetWidth;
+    const th=tooltip.offsetHeight;
+    const vw=window.innerWidth;
+    const vh=window.innerHeight;
+    // Flip left if too close to right edge
+    let left=e.clientX+14;
+    if(left+tw+10>vw) left=e.clientX-tw-10;
+    // Flip up if too close to bottom
+    let top=e.clientY-30;
+    if(top<0) top=e.clientY+14;
+    if(top+th>vh) top=vh-th-8;
+    tooltip.style.left=Math.max(4,left)+"px";
+    tooltip.style.top=Math.max(4,top)+"px";
+  }
+});
 
 (async()=>{
   // No login required to view bus status
