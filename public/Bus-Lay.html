@@ -89,11 +89,17 @@ const destination=localStorage.getItem("selectedDestination");
 const user=JSON.parse(localStorage.getItem("polycoachUser")||"null");
 const tooltip=document.getElementById("seatTooltip");
 
-// Auth guard
-(async()=>{
-  const r=await fetch("/api/session");const d=await r.json();
-  if(!d.loggedIn){alert("Please login first.");window.location.href="Book-Login.html";return;}
-  if(!passengerName){alert("Booking session lost. Please login again.");window.location.href="Book-Login.html";}
+// Guard — check localStorage, no server session needed
+(function(){
+  const u=JSON.parse(localStorage.getItem("polycoachUser")||"null");
+  if(!u||!u.fullName){
+    alert("Please fill in the booking form first.");
+    window.location.href="Book-Login.html";return;
+  }
+  if(!passengerName){
+    alert("Please go back and choose who you are booking for.");
+    window.location.href="Book-Login.html";
+  }
 })();
 
 document.getElementById("sumName").textContent=passengerName||"—";
@@ -161,7 +167,8 @@ async function confirmBooking(){
   const btn=document.getElementById("confirmBtn");
   btn.disabled=true;btn.textContent="Booking...";
   try{
-    const payload={seatNumber:Number(selectedSeat),passengerName:passengerName,destination:destination||""};
+    const u=JSON.parse(localStorage.getItem("polycoachUser")||"{}");
+    const payload={seatNumber:Number(selectedSeat),passengerName:passengerName,destination:destination||"",phone:u.phone||"",program:u.program||""};
     const r=await fetch("/api/book-seat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const d=await r.json();
     if(d.success){

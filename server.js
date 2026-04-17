@@ -172,9 +172,9 @@ function loginRateLimit(req, res, next) {
    AUTH MIDDLEWARE
 ════════════════════════════════════════ */
 function requireUser(req, res, next) {
-  // Allow if admin logged in OR if booking form was filled
-  if (req.session.user || req.session.bookingFilled) return next();
-  res.status(401).json({ success: false, message: "Please fill in the booking form first." });
+  // No server-side auth for regular users — book form on frontend is the gate
+  // Admin routes use requireAdmin separately
+  next();
 }
 function requireAdmin(req, res, next) {
   if (req.session.user && req.session.user.role === "admin") return next();
@@ -338,17 +338,20 @@ app.post("/api/book-seat", requireUser, async (req, res) => {
     if (!seat) return res.status(404).json({ success: false, message: "Seat not found." });
     if (seat.status !== "available")
       return res.status(409).json({ success: false, message: "Seat already taken. Please choose another." });
+    // Get user info from session OR from request body (fallback for session loss)
     const bookUser = req.session.bookingUser || req.session.user || {};
+    const userPhone = req.body.phone || bookUser.phone || "";
+    const userProgram = req.body.program || bookUser.program || "";
     seat.status = "pending";
     seat.passengerName = passengerName;
     seat.destination = destination || bookUser.destination || "";
-    seat.phone = bookUser.phone || "";
+    seat.phone = userPhone;
     await seat.save();
     await Booking.create({
       seatNumber: seatNum, passengerName,
       destination: destination || bookUser.destination || "",
-      phone: bookUser.phone || "",
-      program: bookUser.program || "",
+      phone: userPhone,
+      program: userProgram,
       paymentProof: req.session.paymentProof || null,
       status: "pending"
     });

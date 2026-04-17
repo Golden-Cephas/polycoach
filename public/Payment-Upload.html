@@ -200,12 +200,13 @@
 <script src="/js/popup.js"></script>
 <script>
 /* ── AUTH GUARD ── */
-(async()=>{
-  try{
-    const r=await fetch("/api/session");
-    const d=await r.json();
-    if(!d.loggedIn){alert("Please login first.");window.location.href="Book-Login.html";}
-  }catch{window.location.href="Book-Login.html";}
+// Guard — must have filled the book form (localStorage check, no server session needed)
+(function(){
+  const u=JSON.parse(localStorage.getItem("polycoachUser")||"null");
+  if(!u||!u.fullName){
+    alert("Please fill in the booking form first.");
+    window.location.href="Book-Login.html";
+  }
 })();
 
 /* ── LOAD PAYMENT DETAILS FROM SETTINGS ── */

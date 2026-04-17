@@ -60,8 +60,11 @@
 
 <script src="/js/popup.js"></script>
 <script>
-// Auth guard - this page should only load after booking
-(async()=>{const r=await fetch("/api/session");const d=await r.json();if(!d.loggedIn){window.location.href="Home-Page.html";}})();
+// Guard — check localStorage, no server session needed
+(function(){
+  const u=JSON.parse(localStorage.getItem("polycoachUser")||"null");
+  if(!u||!u.fullName) window.location.href="Home-Page.html";
+})();
 async function logout(){await fetch("/api/logout");localStorage.clear();window.location.href="Home-Page.html";}
 </script>
 </body>
