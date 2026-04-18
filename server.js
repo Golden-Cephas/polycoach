@@ -53,9 +53,9 @@ const userSchema = new mongoose.Schema({
   phone:       { type: String, required: true, unique: true },
   program:     { type: String, default: "" },
   destination: { type: String, default: "" },
-  // Legacy fields — kept optional for backward compatibility
-  regNumber:   { type: String, default: "" },
-  password:    { type: String, default: "" },
+  // Legacy fields — no longer required or unique
+  regNumber:   { type: String, default: null },
+  password:    { type: String, default: null },
   studentID:   { type: String, default: null },
   createdAt:   { type: Date, default: Date.now }
 });
@@ -119,6 +119,16 @@ const DEFAULT_PASSWORDS = {
    SEED
 ════════════════════════════════════════ */
 async function seedDatabase() {
+  // Drop legacy unique index on regNumber if it exists
+  // This caused registration to fail after the first user (all empty strings conflict)
+  try {
+    await User.collection.dropIndex("regNumber_1");
+    console.log("✅ Dropped legacy regNumber unique index");
+  } catch(e) {
+    // Index does not exist — that is fine, nothing to do
+    if (e.code !== 27) console.log("Index drop note:", e.message);
+  }
+
   if (await Seat.countDocuments() === 0) {
     const seats = [];
     for (let i = 1; i <= 72; i++) seats.push({ number: i });
